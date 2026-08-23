@@ -1,4 +1,5 @@
 import { isElectron } from "@/lib/electron";
+import { websocketAuthProtocols } from "@/lib/ws-auth";
 
 export type ConnectionOrigin = "local" | "remote";
 
@@ -75,26 +76,30 @@ async function getRemoteConnectionTarget(): Promise<RemoteConnectionTarget | nul
  * remote server is connected -- callers must show a blocking message
  * rather than attempting to connect.
  */
+export interface WebSocketConnectionTarget {
+  url: string;
+  protocols: string[];
+}
+
 export async function buildOriginWsUrl({
   origin,
   localPort,
   localPath,
   remotePath,
-  includeLocalJwt = true,
+  includeJwt = true,
 }: {
   origin: ConnectionOrigin;
   localPort: number;
   localPath: string;
   remotePath: string;
-  includeLocalJwt?: boolean;
-}): Promise<string | null> {
+  includeJwt?: boolean;
+}): Promise<WebSocketConnectionTarget | null> {
   if (origin === "local") {
-    let url = `ws://127.0.0.1:${localPort}${localPath}`;
-    if (includeLocalJwt) {
-      const token = localStorage.getItem("jwt");
-      if (token) url += `?token=${encodeURIComponent(token)}`;
-    }
-    return url;
+    const token = includeJwt ? localStorage.getItem("jwt") : null;
+    return {
+      url: `ws://127.0.0.1:${localPort}${localPath}`,
+      protocols: websocketAuthProtocols(token),
+    };
   }
 
   const remote = await getRemoteConnectionTarget();
@@ -106,7 +111,8 @@ export async function buildOriginWsUrl({
   const wsHost = remote.serverUrl
     .replace(/^https?:\/\//, "")
     .replace(/\/$/, "");
-  let url = `${wsProtocol}${wsHost}${remotePath}`;
-  if (remote.jwt) url += `?token=${encodeURIComponent(remote.jwt)}`;
-  return url;
+  return {
+    url: `${wsProtocol}${wsHost}${remotePath}`,
+    protocols: websocketAuthProtocols(includeJwt ? remote.jwt : null),
+  };
 }
