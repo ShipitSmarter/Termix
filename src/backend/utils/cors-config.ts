@@ -23,7 +23,6 @@ export function isCorsOriginAllowed(
   if (origin.startsWith(ELECTRON_FILE_ORIGIN)) return true;
 
   const configured = getAllowedOrigins();
-  if (configured.length === 0) return true;
   if (configured.includes(origin)) return true;
 
   return origin === getRequestOrigin(req);
