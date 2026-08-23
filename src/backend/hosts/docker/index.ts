@@ -16,7 +16,6 @@ import {
   getRequestUserId,
   registerDockerSshRoutes,
 } from "./routes.js";
-import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const sshLogger = logger;
 
@@ -48,20 +47,14 @@ registerDockerContainerRoutes(app, {
 
 const PORT = 30007;
 
-listenOnServicePort({
-  app,
-  port: PORT,
-  logger: sshLogger,
-  serviceName: "docker",
-  onListening: async () => {
-    try {
-      await authManager.initialize();
-    } catch (err) {
-      sshLogger.error("Failed to initialize Docker backend", err, {
-        operation: "startup",
-      });
-    }
-  },
+app.listen(PORT, "127.0.0.1", async () => {
+  try {
+    await authManager.initialize();
+  } catch (err) {
+    sshLogger.error("Failed to initialize Docker backend", err, {
+      operation: "startup",
+    });
+  }
 });
 
 process.on("SIGINT", () => {
