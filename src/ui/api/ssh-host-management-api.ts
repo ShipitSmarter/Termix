@@ -139,6 +139,7 @@ export async function bulkImportSSHHosts(
   hosts: SSHHostData[],
   overwrite = false,
   credentials?: Record<string, unknown>[],
+  options?: { credentialFree?: boolean; skipExisting?: boolean },
 ): Promise<{
   message: string;
   success: number;
@@ -151,6 +152,8 @@ export async function bulkImportSSHHosts(
     const response = await sshHostApi.post("/bulk-import", {
       hosts,
       overwrite,
+      ...(options?.credentialFree ? { credentialFree: true } : {}),
+      ...(options?.skipExisting ? { skipExisting: true } : {}),
       ...(credentials ? { credentials } : {}),
     });
     invalidateHostsAndStatusCaches();
