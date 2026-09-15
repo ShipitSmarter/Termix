@@ -191,6 +191,48 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableTelnet: boolean;
 };
 
+const CREDENTIAL_FREE_IMPORT_FIELDS = [
+  "password",
+  "key",
+  "keyPassword",
+  "sudoPassword",
+  "credentialId",
+  "credentialAlias",
+  "credentialName",
+  "vaultProfileId",
+  "overrideCredentialUsername",
+  "rdpUser",
+  "rdpPassword",
+  "rdpDomain",
+  "rdpCredentialId",
+  "vncUser",
+  "vncPassword",
+  "vncCredentialId",
+  "telnetUser",
+  "telnetPassword",
+  "telnetCredentialId",
+  "socks5Username",
+  "socks5Password",
+  "socks5ProxyChain",
+  "tunnelConnections",
+  "authOverrides",
+  "guacamoleConfig",
+  "proxmoxConfig",
+] as const;
+
+/** Remove all authentication material before a credential-free import. */
+export function sanitizeCredentialFreeImportedHost(
+  hostData: Record<string, unknown>,
+): Record<string, unknown> {
+  const sanitized = { ...hostData };
+  for (const field of CREDENTIAL_FREE_IMPORT_FIELDS) delete sanitized[field];
+  sanitized.authType = "none";
+  sanitized.enableRdp = false;
+  sanitized.enableVnc = false;
+  sanitized.enableTelnet = false;
+  return sanitized;
+}
+
 export function normalizeImportedHost(
   hostData: Record<string, unknown>,
 ): NormalizedImportedHost {

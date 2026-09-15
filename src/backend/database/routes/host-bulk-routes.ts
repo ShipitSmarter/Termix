@@ -1,6 +1,7 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import { sshLogger } from "../../utils/logger.js";
 import {
   createCurrentCredentialRepository,
@@ -12,6 +13,7 @@ import {
   isNonEmptyString,
   isValidPort,
   normalizeImportedHost,
+  sanitizeCredentialFreeImportedHost,
 } from "./host-normalizers.js";
 
 type SSHConfigHost = {
@@ -109,6 +111,13 @@ export function registerHostBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
 ): void {
+  const rateLimitHostBulkImport = rateLimit({
+    windowMs: 60_000,
+    limit: 60,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+  });
+
   /**
    * @openapi
    * /host/bulk-import:
@@ -128,6 +137,14 @@ export function registerHostBulkRoutes(
    *                 type: array
    *                 items:
    *                   type: object
+   *               overwrite:
+   *                 type: boolean
+   *               credentialFree:
+   *                 type: boolean
+   *                 description: Remove credential-bearing fields before persistence.
+   *               skipExisting:
+   *                 type: boolean
+   *                 description: Skip matching existing personal hosts instead of updating or duplicating them.
    *     responses:
    *       200:
    *         description: Import completed.
@@ -421,12 +438,15 @@ export function registerHostBulkRoutes(
 
   router.post(
     "/bulk-import",
+    rateLimitHostBulkImport,
     authenticateJWT,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const {
         hosts: hostsToImport,
         overwrite,
+        credentialFree,
+        skipExisting,
         credentials: credentialsToImport,
       } = req.body;
 
@@ -457,56 +477,58 @@ export function registerHostBulkRoutes(
       };
 
       try {
-        const credentialRepository = createCurrentCredentialRepository();
-        const existingCredentials =
-          await credentialRepository.listDecryptedByUserId(userId);
+        if (!credentialFree) {
+          const credentialRepository = createCurrentCredentialRepository();
+          const existingCredentials =
+            await credentialRepository.listDecryptedByUserId(userId);
 
-        for (const credential of existingCredentials) {
-          addCredentialAlias(credential.name, credential.id as number);
-        }
+          for (const credential of existingCredentials) {
+            addCredentialAlias(credential.name, credential.id as number);
+          }
 
-        if (Array.isArray(credentialsToImport)) {
-          for (const rawCredential of credentialsToImport as ShareCredential[]) {
-            const alias = textValue(rawCredential.alias);
-            const name = textValue(rawCredential.name) || alias;
-            if (!alias || !name) continue;
+          if (Array.isArray(credentialsToImport)) {
+            for (const rawCredential of credentialsToImport as ShareCredential[]) {
+              const alias = textValue(rawCredential.alias);
+              const name = textValue(rawCredential.name) || alias;
+              if (!alias || !name) continue;
 
-            const existingId = credentialAliasMap.get(name.toLowerCase());
-            if (existingId) {
-              addCredentialAlias(alias, existingId);
-              continue;
-            }
+              const existingId = credentialAliasMap.get(name.toLowerCase());
+              if (existingId) {
+                addCredentialAlias(alias, existingId);
+                continue;
+              }
 
-            const now = new Date().toISOString();
-            const created = await credentialRepository.createEncryptedForUser(
-              userId,
-              {
+              const now = new Date().toISOString();
+              const created = await credentialRepository.createEncryptedForUser(
                 userId,
-                name,
-                description:
-                  textValue(rawCredential.description) ||
-                  "Imported placeholder. Add the secret before connecting.",
-                folder: textValue(rawCredential.folder),
-                tags: tagString(rawCredential.tags),
-                authType: normalizeCredentialAuthType(rawCredential.authType),
-                username: textValue(rawCredential.username),
-                password: null,
-                key: null,
-                privateKey: null,
-                publicKey: null,
-                keyPassword: null,
-                keyType: textValue(rawCredential.keyType),
-                detectedKeyType: null,
-                usageCount: 0,
-                lastUsed: null,
-                createdAt: now,
-                updatedAt: now,
-              },
-            );
+                {
+                  userId,
+                  name,
+                  description:
+                    textValue(rawCredential.description) ||
+                    "Imported placeholder. Add the secret before connecting.",
+                  folder: textValue(rawCredential.folder),
+                  tags: tagString(rawCredential.tags),
+                  authType: normalizeCredentialAuthType(rawCredential.authType),
+                  username: textValue(rawCredential.username),
+                  password: null,
+                  key: null,
+                  privateKey: null,
+                  publicKey: null,
+                  keyPassword: null,
+                  keyType: textValue(rawCredential.keyType),
+                  detectedKeyType: null,
+                  usageCount: 0,
+                  lastUsed: null,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              );
 
-            const createdCredential = created as Record<string, unknown>;
-            addCredentialAlias(alias, createdCredential.id as number);
-            addCredentialAlias(name, createdCredential.id as number);
+              const createdCredential = created as Record<string, unknown>;
+              addCredentialAlias(alias, createdCredential.id as number);
+              addCredentialAlias(name, createdCredential.id as number);
+            }
           }
         }
       } catch (error) {
@@ -517,7 +539,7 @@ export function registerHostBulkRoutes(
 
       let existingHostMap: Map<string, { id: number }> | undefined;
       const hostRepository = createCurrentHostRepository();
-      if (overwrite) {
+      if (overwrite || skipExisting) {
         try {
           const allHosts =
             await createCurrentHostResolutionRepository().findHostsByUserId(
@@ -534,7 +556,11 @@ export function registerHostBulkRoutes(
       }
 
       for (let i = 0; i < hostsToImport.length; i++) {
-        const hostData = normalizeImportedHost(hostsToImport[i]);
+        const rawHostData =
+          credentialFree && hostsToImport[i]
+            ? sanitizeCredentialFreeImportedHost(hostsToImport[i])
+            : hostsToImport[i];
+        const hostData = normalizeImportedHost(rawHostData);
 
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
@@ -771,6 +797,11 @@ export function registerHostBulkRoutes(
 
           const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
           const existing = existingHostMap?.get(lookupKey);
+
+          if (existing && skipExisting) {
+            results.skipped++;
+            continue;
+          }
 
           if (existing) {
             await hostRepository.updateEncryptedForUser(
