@@ -42,6 +42,51 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+const SHARED_HOST_SELECTION_RATE_WINDOW_MS = 60_000;
+const SHARED_HOST_SELECTION_RATE_LIMIT = 60;
+const sharedHostSelectionRate = new Map<
+  string,
+  { count: number; windowStartedAt: number }
+>();
+
+function rateLimitSharedHostSelections(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: () => void,
+): void {
+  const now = Date.now();
+  const key = `${req.userId ?? "anonymous"}:${req.ip}`;
+  const current = sharedHostSelectionRate.get(key);
+  const entry =
+    !current ||
+    now - current.windowStartedAt >= SHARED_HOST_SELECTION_RATE_WINDOW_MS
+      ? { count: 1, windowStartedAt: now }
+      : { count: current.count + 1, windowStartedAt: current.windowStartedAt };
+
+  if (sharedHostSelectionRate.size > 10_000) {
+    for (const [storedKey, storedEntry] of sharedHostSelectionRate) {
+      if (
+        now - storedEntry.windowStartedAt >=
+        SHARED_HOST_SELECTION_RATE_WINDOW_MS
+      ) {
+        sharedHostSelectionRate.delete(storedKey);
+      }
+    }
+  }
+  sharedHostSelectionRate.set(key, entry);
+
+  if (entry.count > SHARED_HOST_SELECTION_RATE_LIMIT) {
+    const retryAfter = Math.ceil(
+      (entry.windowStartedAt + SHARED_HOST_SELECTION_RATE_WINDOW_MS - now) /
+        1000,
+    );
+    res.setHeader("Retry-After", String(Math.max(1, retryAfter)));
+    res.status(429).json({ error: "Too many shared host selection requests" });
+    return;
+  }
+  next();
+}
+
 export function isSharePermissionLevel(
   value: unknown,
 ): value is SharePermissionLevel {
@@ -811,6 +856,7 @@ router.get(
 router.get(
   "/shared-host-selections",
   authenticateJWT,
+  rateLimitSharedHostSelections,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const selections =
@@ -835,6 +881,7 @@ router.get(
 router.put(
   "/shared-host-selections/:hostId",
   authenticateJWT,
+  rateLimitSharedHostSelections,
   async (req: AuthenticatedRequest, res: Response) => {
     const hostId = Number(req.params.hostId);
     const folder = req.body?.folder;
@@ -878,6 +925,7 @@ router.put(
 router.delete(
   "/shared-host-selections/:hostId",
   authenticateJWT,
+  rateLimitSharedHostSelections,
   async (req: AuthenticatedRequest, res: Response) => {
     const hostId = Number(req.params.hostId);
     if (!Number.isInteger(hostId) || hostId <= 0) {
