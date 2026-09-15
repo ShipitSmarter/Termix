@@ -524,6 +524,8 @@ export function HostsPanel({
                 const result = await bulkImportSSHHosts(
                   normalized as unknown as HostData[],
                   false,
+                  undefined,
+                  { credentialFree: true, skipExisting: true },
                 );
                 const hosts = await getSSHHosts();
                 setRawHosts(hosts);
