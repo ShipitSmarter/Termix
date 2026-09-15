@@ -943,6 +943,7 @@ router.delete(
 
 router.get(
   "/shared-host-imports",
+  rateLimitSharedHostSelections,
   authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
     const imports =
