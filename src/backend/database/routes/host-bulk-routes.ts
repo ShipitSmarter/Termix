@@ -1,6 +1,7 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import { sshLogger } from "../../utils/logger.js";
 import {
   createCurrentCredentialRepository,
@@ -110,6 +111,13 @@ export function registerHostBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
 ): void {
+  const rateLimitHostBulkImport = rateLimit({
+    windowMs: 60_000,
+    limit: 60,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+  });
+
   /**
    * @openapi
    * /host/bulk-import:
@@ -430,6 +438,7 @@ export function registerHostBulkRoutes(
 
   router.post(
     "/bulk-import",
+    rateLimitHostBulkImport,
     authenticateJWT,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
