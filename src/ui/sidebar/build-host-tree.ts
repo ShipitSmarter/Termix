@@ -1,5 +1,7 @@
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { HostFolder } from "@/types/ui-types";
+import type { SharedHostCatalogRow } from "./shared-host-catalog";
+import { sharedCatalogHostToSSHHost } from "./shared-host-catalog";
 import { sshHostToHost } from "./HostManagerData";
 
 /**
@@ -29,6 +31,7 @@ export function buildHostTree(
       sortOrder?: number | null;
     }
   >,
+  selectedSharedHosts?: SharedHostCatalogRow[],
 ): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
   const folderMap = new Map<string, HostFolder>();
@@ -105,6 +108,20 @@ export function buildHostTree(
     } else {
       root.children.push(host);
     }
+  }
+
+  if (selectedSharedHosts) {
+    const myHosts: HostFolder = {
+      name: "My Hosts",
+      children: root.children,
+    };
+    const sharedTree = buildHostTree(
+      selectedSharedHosts.map(sharedCatalogHostToSSHHost),
+    );
+    root.children = [
+      myHosts,
+      { name: "Shared Hosts", children: sharedTree.children },
+    ];
   }
   return root;
 }
