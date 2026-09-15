@@ -2213,6 +2213,8 @@ export {
   setHostAuthOverride,
   getPermissionsCatalog,
   getSharedHosts,
+  getSharedHostImportMetadata,
+  importSharedHosts,
   getSharedHostSelections,
   selectSharedHost,
   removeSharedHostSelection,

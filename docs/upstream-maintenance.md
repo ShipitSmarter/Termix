@@ -55,7 +55,7 @@ When upstream changes host, folder, authorization, credential, or migration code
 
 1. Run the upstream and downstream test suites.
 2. Run database migration checks against a disposable instance.
-3. Test the Shared Hosts selection and personal-import flows.
+3. Test the Shared Hosts selection and catalog copy flows.
 4. Verify that imported hosts receive the authenticated user as owner.
 5. Verify that no source credential IDs or credential material are copied.
 6. Verify folder and subfolder placement.
@@ -85,8 +85,7 @@ Keep the Shared Hosts work in focused commits, in this approximate order:
 1. schema and migration for user-specific shared-host selections;
 2. authorized shared-host catalog and selection API;
 3. fixed folder and subfolder behavior;
-4. credential-free personal import service;
-5. UI catalog and host-menu integration;
-6. authorization, secret-exclusion, idempotency, and lifecycle tests.
+4. UI catalog and host-menu integration;
+5. authorization, secret-exclusion, idempotency, and lifecycle tests.
 
 Avoid broad refactors while implementing the feature. Preserve upstream conventions and make source ownership, personal ownership, and credential boundaries explicit in both code and tests.

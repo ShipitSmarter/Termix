@@ -4,7 +4,11 @@ import express, { type Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  getRequestMeta,
+  getAuditUsername,
+  logAudit,
+} from "../../utils/audit-logger.js";
 import { isAuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import {
   SharedHostAuthOverrideService,
@@ -20,8 +24,14 @@ import {
   isValidPermission,
 } from "../../utils/permission-catalog.js";
 import {
+  buildPersonalHostCopy,
+  type SharedHostCopySource,
+} from "../repositories/personal-host-source-repository.js";
+import {
   createCurrentHostFolderRepository,
   createCurrentHostResolutionRepository,
+  createCurrentHostRepository,
+  createCurrentPersonalHostSourceRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
   createCurrentSharedHostSelectionRepository,
@@ -49,6 +59,25 @@ const rateLimitSharedHostSelections = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
 });
+
+export function parseSharedHostImportIds(body: unknown): number[] | null {
+  const sourceHostIds = (body as { sourceHostIds?: unknown } | null)
+    ?.sourceHostIds;
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Object.keys(body).some((key) => key !== "sourceHostIds") ||
+    !Array.isArray(sourceHostIds) ||
+    sourceHostIds.length === 0 ||
+    sourceHostIds.some(
+      (id: unknown) =>
+        typeof id !== "number" || !Number.isInteger(id) || id <= 0,
+    )
+  ) {
+    return null;
+  }
+  return [...new Set(sourceHostIds)];
+}
 
 export function isSharePermissionLevel(
   value: unknown,
@@ -909,6 +938,120 @@ router.delete(
       });
       res.status(500).json({ error: "Failed to remove shared host selection" });
     }
+  },
+);
+
+router.get(
+  "/shared-host-imports",
+  rateLimitSharedHostSelections,
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const imports =
+      await createCurrentPersonalHostSourceRepository().listByUserId(
+        req.userId!,
+      );
+    res.json({ imports });
+  },
+);
+
+router.post(
+  "/shared-host-imports",
+  rateLimitSharedHostSelections,
+  authenticateJWT,
+  requireDataAccess,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const sourceHostIds = parseSharedHostImportIds(req.body);
+    if (!sourceHostIds) {
+      return res
+        .status(400)
+        .json({ error: "sourceHostIds must be a non-empty array of host IDs" });
+    }
+
+    const userId = req.userId!;
+    const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
+    const visibleHosts =
+      await createCurrentRbacAccessRepository().listSharedHosts(
+        userId,
+        roleIds,
+      );
+    const visibleById = new Map(visibleHosts.map((host) => [host.id, host]));
+    const sourceRepository = createCurrentPersonalHostSourceRepository();
+    const hostRepository = createCurrentHostRepository();
+    const results: Array<Record<string, unknown>> = [];
+
+    for (const sourceHostId of [...new Set(sourceHostIds as number[])]) {
+      const existing = await sourceRepository.findByUserAndSource(
+        userId,
+        sourceHostId,
+      );
+      if (existing) {
+        results.push({
+          sourceSharedHostId: sourceHostId,
+          status: "already-imported",
+          importedHostId: existing.personalHostId,
+        });
+        continue;
+      }
+
+      const source = visibleById.get(sourceHostId);
+      const access = await permissionManager.canAccessHost(
+        userId,
+        sourceHostId,
+        "connect",
+      );
+      if (!source || !access.hasAccess || access.isOwner) {
+        results.push({
+          sourceSharedHostId: sourceHostId,
+          status: source ? "forbidden" : "not-found",
+        });
+        continue;
+      }
+
+      const snapshotAt = new Date().toISOString();
+      const destination = await hostRepository.createEncryptedForUser(
+        userId,
+        buildPersonalHostCopy(
+          userId,
+          source as SharedHostCopySource,
+          snapshotAt,
+        ),
+      );
+      let metadata;
+      try {
+        metadata = await sourceRepository.create({
+          userId,
+          personalHostId: destination.id,
+          sourceSharedHostId: sourceHostId,
+          sourceSnapshotAt: snapshotAt,
+        });
+      } catch (error) {
+        // Host and source marker are separate repositories. If the unique
+        // source marker loses a concurrent race, remove the orphaned copy.
+        await hostRepository.deleteForUser(userId, destination.id);
+        throw error;
+      }
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: "import_shared_host",
+        resourceType: "host",
+        resourceId: String(metadata.personalHostId),
+        resourceName: String(source.name ?? source.ip),
+        ...getRequestMeta(req),
+        success: true,
+        details: JSON.stringify({
+          sourceSharedHostId: sourceHostId,
+          sourceType: metadata.sourceType,
+        }),
+      });
+      results.push({
+        sourceSharedHostId: sourceHostId,
+        status: "created",
+        importedHostId: metadata.personalHostId,
+      });
+    }
+
+    return res.json({ results });
   },
 );
 

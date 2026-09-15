@@ -484,6 +484,40 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (granted_by) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS shared_host_selections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        folder TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, host_id),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_shared_host_selections_user_id
+      ON shared_host_selections (user_id);
+    CREATE INDEX IF NOT EXISTS idx_shared_host_selections_host_id
+      ON shared_host_selections (host_id);
+
+    CREATE TABLE IF NOT EXISTS personal_host_sources (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        personal_host_id INTEGER NOT NULL,
+        source_shared_host_id INTEGER NOT NULL,
+        source_snapshot_at TEXT NOT NULL,
+        source_type TEXT NOT NULL DEFAULT 'shared-host-import',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, source_shared_host_id),
+        UNIQUE(personal_host_id),
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (personal_host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_personal_host_sources_user_id
+      ON personal_host_sources (user_id);
+
     CREATE TABLE IF NOT EXISTS roles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
