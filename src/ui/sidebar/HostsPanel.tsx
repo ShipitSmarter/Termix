@@ -53,7 +53,6 @@ import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import { sortHostTree, type SortKey } from "@/sidebar/host-sort";
 import { useHostSidebarPreferences } from "@/sidebar/tree/hooks/useHostSidebarPreferences";
-import { sanitizePersonalImportPayload } from "@/sidebar/personal-import";
 import { useArrangeLock } from "@/sidebar/use-arrange-lock";
 import type {
   HostGroupKey,
@@ -236,7 +235,6 @@ export function HostsPanel({
   const filterState = sidebarPrefs.filters;
   const filterActive = Object.values(filterState).some((arr) => arr.length > 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const personalImportInputRef = useRef<HTMLInputElement>(null);
   const sshConfigInputRef = useRef<HTMLInputElement>(null);
   const importOverwriteRef = useRef(false);
   const allTags = [...new Set(rawHosts.flatMap((h) => h.tags ?? []))];
@@ -489,64 +487,6 @@ export function HostsPanel({
           />
 
           <input
-            ref={personalImportInputRef}
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              e.target.value = "";
-              try {
-                const parsed = JSON.parse(await file.text());
-                const source = Array.isArray(parsed)
-                  ? { hosts: parsed }
-                  : parsed;
-                const sanitized = sanitizePersonalImportPayload(source);
-                if (sanitized.hosts.length === 0) {
-                  toast.error("No hosts found in template");
-                  return;
-                }
-                if (sanitized.hosts.length > 100) {
-                  toast.error("Cannot import more than 100 hosts at once");
-                  return;
-                }
-                const normalized = sanitized.hosts.map(
-                  (h: Record<string, unknown>) => ({
-                    ...h,
-                    port: h.port ?? h.sshPort ?? 22,
-                    enableSsh: h.enableSsh ?? h.connectionType === "ssh",
-                    enableRdp: h.enableRdp ?? false,
-                    enableVnc: h.enableVnc ?? false,
-                    enableTelnet: h.enableTelnet ?? false,
-                  }),
-                );
-                const result = await bulkImportSSHHosts(
-                  normalized as unknown as HostData[],
-                  false,
-                  undefined,
-                  { credentialFree: true, skipExisting: true },
-                );
-                const hosts = await getSSHHosts();
-                setRawHosts(hosts);
-                window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-                const msg = [
-                  result.success ? `${result.success} imported` : null,
-                  result.skipped ? `${result.skipped} skipped` : null,
-                  result.failed ? `${result.failed} failed` : null,
-                ]
-                  .filter(Boolean)
-                  .join(", ");
-                toast.success(`Personal import complete: ${msg}`);
-              } catch (err: unknown) {
-                toast.error(
-                  getErrorMessage(err, "Failed to import personal template"),
-                );
-              }
-            }}
-          />
-
-          <input
             ref={sshConfigInputRef}
             type="file"
             accept=".conf,.config,*"
@@ -607,13 +547,6 @@ export function HostsPanel({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="text-xs">
-                  <DropdownMenuItem
-                    onClick={() => personalImportInputRef.current?.click()}
-                  >
-                    <Upload className="size-3.5 mr-2" />
-                    Import personal template (credential-free)
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => {
                       importOverwriteRef.current = false;

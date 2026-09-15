@@ -28,7 +28,7 @@ export interface SharedHostCatalogRow extends SharedHostCatalogEntry {
   conflict?: "already-imported" | null;
 }
 
-/** Convert the credential-free catalog projection into the sidebar host shape. */
+/** Convert the catalog projection into the sidebar host shape. */
 export function sharedCatalogHostToSSHHost(
   host: SharedHostCatalogRow,
 ): SSHHostWithStatus {

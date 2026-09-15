@@ -60,6 +60,25 @@ const rateLimitSharedHostSelections = rateLimit({
   legacyHeaders: false,
 });
 
+export function parseSharedHostImportIds(body: unknown): number[] | null {
+  const sourceHostIds = (body as { sourceHostIds?: unknown } | null)
+    ?.sourceHostIds;
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Object.keys(body).some((key) => key !== "sourceHostIds") ||
+    !Array.isArray(sourceHostIds) ||
+    sourceHostIds.length === 0 ||
+    sourceHostIds.some(
+      (id: unknown) =>
+        typeof id !== "number" || !Number.isInteger(id) || id <= 0,
+    )
+  ) {
+    return null;
+  }
+  return [...new Set(sourceHostIds)];
+}
+
 export function isSharePermissionLevel(
   value: unknown,
 ): value is SharePermissionLevel {
@@ -940,15 +959,8 @@ router.post(
   authenticateJWT,
   requireDataAccess,
   async (req: AuthenticatedRequest, res: Response) => {
-    const sourceHostIds = req.body?.sourceHostIds;
-    if (
-      !Array.isArray(sourceHostIds) ||
-      sourceHostIds.length === 0 ||
-      sourceHostIds.some(
-        (id: unknown) =>
-          typeof id !== "number" || !Number.isInteger(id) || id <= 0,
-      )
-    ) {
+    const sourceHostIds = parseSharedHostImportIds(req.body);
+    if (!sourceHostIds) {
       return res
         .status(400)
         .json({ error: "sourceHostIds must be a non-empty array of host IDs" });
@@ -1003,12 +1015,20 @@ router.post(
           snapshotAt,
         ),
       );
-      const metadata = await sourceRepository.create({
-        userId,
-        personalHostId: destination.id,
-        sourceSharedHostId: sourceHostId,
-        sourceSnapshotAt: snapshotAt,
-      });
+      let metadata;
+      try {
+        metadata = await sourceRepository.create({
+          userId,
+          personalHostId: destination.id,
+          sourceSharedHostId: sourceHostId,
+          sourceSnapshotAt: snapshotAt,
+        });
+      } catch (error) {
+        // Host and source marker are separate repositories. If the unique
+        // source marker loses a concurrent race, remove the orphaned copy.
+        await hostRepository.deleteForUser(userId, destination.id);
+        throw error;
+      }
       await logAudit({
         userId,
         username: await getAuditUsername(userId),
