@@ -20,6 +20,7 @@ import {
   Server,
   SlidersHorizontal,
   Upload,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ import { HostShareModal } from "@/sidebar/HostShareModal";
 import { HostExportDialog } from "@/sidebar/HostExportDialog";
 import { CustomizeSidebarPanel } from "@/sidebar/CustomizeSidebarPanel";
 import { ProxmoxDiscoverDialog } from "@/components/proxmox/ProxmoxDiscoverDialog";
+import { SharedHostsCatalog } from "@/sidebar/SharedHostsCatalog";
 import { Button } from "@/components/button";
 import {
   DropdownMenu,
@@ -205,6 +207,7 @@ export function HostsPanel({
   const [managerEditing, setManagerEditing] = useState(false);
   const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [sharedHostsOpen, setSharedHostsOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [rawHosts, setRawHosts] = useState<SSHHostWithStatus[]>([]);
   const [shareModalHost, setShareModalHost] = useState<Host | null>(null);
@@ -1006,6 +1009,15 @@ export function HostsPanel({
             </div>
             <div className="flex items-center border border-border shrink-0">
               <button
+                onClick={() => setSharedHostsOpen(true)}
+                title="Shared Hosts"
+                className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              >
+                <Users className="size-3.5" />
+              </button>
+            </div>
+            <div className="flex items-center border border-border shrink-0">
+              <button
                 onClick={() => setCustomizePanelOpen(true)}
                 title={t("hosts.customizeSidebar")}
                 className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
@@ -1037,8 +1049,12 @@ export function HostsPanel({
         update={updateSidebarPrefs}
       />
 
-      {active && !managerEditing && (
-        <div className="flex flex-col flex-1 min-h-0">
+      {sharedHostsOpen ? (
+        <SharedHostsCatalog onClose={() => setSharedHostsOpen(false)} />
+      ) : (
+        active &&
+        !managerEditing && (
+          <div className="flex flex-col flex-1 min-h-0">
           <SidebarTree
             children={
               hostTree
@@ -1077,7 +1093,8 @@ export function HostsPanel({
             showTags={sidebarPrefs.display.showTags}
             openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
           />
-        </div>
+          </div>
+        )
       )}
 
       <div
