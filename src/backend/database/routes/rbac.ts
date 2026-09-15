@@ -48,10 +48,6 @@ const rateLimitSharedHostSelections = rateLimit({
   limit: 60,
   standardHeaders: "draft-8",
   legacyHeaders: false,
-  keyGenerator: (req) => {
-    const authenticatedRequest = req as AuthenticatedRequest;
-    return `${authenticatedRequest.userId ?? "anonymous"}:${req.ip ?? "unknown"}`;
-  },
 });
 
 export function isSharePermissionLevel(
@@ -822,8 +818,8 @@ router.get(
  */
 router.get(
   "/shared-host-selections",
-  authenticateJWT,
   rateLimitSharedHostSelections,
+  authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const selections =
@@ -847,8 +843,8 @@ router.get(
  */
 router.put(
   "/shared-host-selections/:hostId",
-  authenticateJWT,
   rateLimitSharedHostSelections,
+  authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
     const hostId = Number(req.params.hostId);
     const folder = req.body?.folder;
@@ -891,8 +887,8 @@ router.put(
 
 router.delete(
   "/shared-host-selections/:hostId",
-  authenticateJWT,
   rateLimitSharedHostSelections,
+  authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
     const hostId = Number(req.params.hostId);
     if (!Number.isInteger(hostId) || hostId <= 0) {
