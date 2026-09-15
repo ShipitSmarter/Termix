@@ -1,4 +1,7 @@
-import type { SharedHostSelection } from "@/api/rbac-api";
+import type {
+  SharedHostImportMetadata,
+  SharedHostSelection,
+} from "@/api/rbac-api";
 import type { SSHHostWithStatus } from "@/main-axios";
 
 export interface SharedHostCatalogEntry {
@@ -18,6 +21,11 @@ export interface SharedHostCatalogEntry {
 export interface SharedHostCatalogRow extends SharedHostCatalogEntry {
   selected: boolean;
   selectedFolder: string | null;
+  useSelected?: boolean;
+  imported?: boolean;
+  importedHostId?: number | null;
+  sourceSnapshotAt?: string | null;
+  conflict?: "already-imported" | null;
 }
 
 /** Convert the credential-free catalog projection into the sidebar host shape. */
@@ -45,16 +53,26 @@ export function sharedCatalogHostToSSHHost(
 export function mergeSharedHostSelections(
   hosts: SharedHostCatalogEntry[],
   selections: SharedHostSelection[],
+  imports: SharedHostImportMetadata[] = [],
 ): SharedHostCatalogRow[] {
   const byHostId = new Map(
     selections.map((selection) => [selection.hostId, selection]),
   );
+  const importsByHostId = new Map(
+    imports.map((entry) => [entry.sourceSharedHostId, entry]),
+  );
   return hosts.map((host) => {
     const selection = byHostId.get(host.id);
+    const imported = importsByHostId.get(host.id);
     return {
       ...host,
       selected: selection !== undefined,
       selectedFolder: selection?.folder ?? null,
+      useSelected: selection !== undefined,
+      imported: imported !== undefined,
+      importedHostId: imported?.importedHostId ?? null,
+      sourceSnapshotAt: imported?.sourceSnapshotAt ?? null,
+      conflict: imported ? "already-imported" : null,
     };
   });
 }
