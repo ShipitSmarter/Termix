@@ -718,6 +718,34 @@ export const hostAccess = pgTable(
   ],
 );
 
+export const sharedHostSelections = pgTable(
+  "shared_host_selections",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    folder: text("folder"),
+    createdAt: varchar("created_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: varchar("updated_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("shared_host_selections_user_host_unique").on(
+      table.userId,
+      table.hostId,
+    ),
+    index("idx_shared_host_selections_user_id").on(table.userId),
+    index("idx_shared_host_selections_host_id").on(table.hostId),
+  ],
+);
+
 export const sharedHostAuthOverrides = pgTable(
   "shared_host_auth_overrides",
   {

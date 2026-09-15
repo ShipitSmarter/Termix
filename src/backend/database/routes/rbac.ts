@@ -1,6 +1,7 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express, { type Response } from "express";
+import { rateLimit } from "express-rate-limit";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import {
@@ -30,6 +31,7 @@ import {
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
+  createCurrentSharedHostSelectionRepository,
   createCurrentSnippetRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
@@ -47,6 +49,13 @@ const sharedHostAuthOverrideService =
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
+
+const rateLimitSharedHostSelections = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
 
 export function isSharePermissionLevel(
   value: unknown,
@@ -896,6 +905,106 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to get access list" });
+    }
+  },
+);
+
+/**
+ * Lists the authenticated user's selected shared hosts. The selection is a
+ * reference only; the shared host remains owned by its original owner.
+ */
+router.get(
+  "/shared-host-selections",
+  rateLimitSharedHostSelections,
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const selections =
+        await createCurrentSharedHostSelectionRepository().listByUserId(
+          req.userId!,
+        );
+      res.json({ selections });
+    } catch (error) {
+      databaseLogger.error("Failed to list shared host selections", error, {
+        operation: "list_shared_host_selections",
+        userId: req.userId,
+      });
+      res.status(500).json({ error: "Failed to list shared host selections" });
+    }
+  },
+);
+
+/**
+ * Selects a shared host for the authenticated user's personal sidebar.
+ * Selection never copies host data or credentials.
+ */
+router.put(
+  "/shared-host-selections/:hostId",
+  rateLimitSharedHostSelections,
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const hostId = Number(req.params.hostId);
+    const folder = req.body?.folder;
+    if (!Number.isInteger(hostId) || hostId <= 0) {
+      return res.status(400).json({ error: "Invalid host id" });
+    }
+    if (folder !== null && folder !== undefined && !isNonEmptyString(folder)) {
+      return res
+        .status(400)
+        .json({ error: "Folder must be a non-empty string or null" });
+    }
+
+    try {
+      const access = await permissionManager.canAccessHost(
+        req.userId!,
+        hostId,
+        "connect",
+      );
+      if (!access.hasAccess || access.isOwner) {
+        return res.status(404).json({ error: "Shared host not found" });
+      }
+
+      const selection =
+        await createCurrentSharedHostSelectionRepository().upsertForUser(
+          req.userId!,
+          hostId,
+          folder === undefined ? null : folder === null ? null : folder.trim(),
+        );
+      res.json({ selection });
+    } catch (error) {
+      databaseLogger.error("Failed to select shared host", error, {
+        operation: "select_shared_host",
+        userId: req.userId,
+        hostId,
+      });
+      res.status(500).json({ error: "Failed to select shared host" });
+    }
+  },
+);
+
+router.delete(
+  "/shared-host-selections/:hostId",
+  rateLimitSharedHostSelections,
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const hostId = Number(req.params.hostId);
+    if (!Number.isInteger(hostId) || hostId <= 0) {
+      return res.status(400).json({ error: "Invalid host id" });
+    }
+    try {
+      const deleted =
+        await createCurrentSharedHostSelectionRepository().deleteForUser(
+          req.userId!,
+          hostId,
+        );
+      res.json({ success: true, deleted });
+    } catch (error) {
+      databaseLogger.error("Failed to remove shared host selection", error, {
+        operation: "delete_shared_host_selection",
+        userId: req.userId,
+        hostId,
+      });
+      res.status(500).json({ error: "Failed to remove shared host selection" });
     }
   },
 );

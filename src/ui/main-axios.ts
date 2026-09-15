@@ -2220,6 +2220,9 @@ export {
   setHostAuthOverride,
   getPermissionsCatalog,
   getSharedHosts,
+  getSharedHostSelections,
+  selectSharedHost,
+  removeSharedHostSelection,
   shareSnippet,
   getSnippetAccess,
   revokeSnippetAccess,
@@ -2229,6 +2232,7 @@ export type {
   SharePermissionLevel,
   ShareTarget,
   PermissionCatalogEntry,
+  SharedHostSelection,
 } from "@/api/rbac-api";
 
 // ============================================================================

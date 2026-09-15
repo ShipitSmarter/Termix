@@ -50,6 +50,7 @@ import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
+import { SharedHostSelectionRepository } from "./shared-host-selection-repository.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
 import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
@@ -470,6 +471,13 @@ export function createCurrentSharedHostAuthOverrideRepository(): SharedHostAuthO
     createCurrentRepositoryWriteHook(
       "shared_host_auth_override_repository_write",
     ),
+  );
+}
+
+export function createCurrentSharedHostSelectionRepository(): SharedHostSelectionRepository {
+  return new SharedHostSelectionRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("shared_host_selection_repository_write"),
   );
 }
 

@@ -710,6 +710,34 @@ export const hostAccess = sqliteTable(
   ],
 );
 
+export const sharedHostSelections = sqliteTable(
+  "shared_host_selections",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    folder: text("folder"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("shared_host_selections_user_host_unique").on(
+      table.userId,
+      table.hostId,
+    ),
+    index("idx_shared_host_selections_user_id").on(table.userId),
+    index("idx_shared_host_selections_host_id").on(table.hostId),
+  ],
+);
+
 export const sharedHostAuthOverrides = sqliteTable(
   "shared_host_auth_overrides",
   {

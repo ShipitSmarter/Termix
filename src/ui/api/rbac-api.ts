@@ -277,6 +277,56 @@ export async function getPermissionsCatalog(): Promise<{
   }
 }
 
+export interface SharedHostSelection {
+  id: number;
+  userId: string;
+  hostId: number;
+  folder: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getSharedHostSelections(): Promise<{
+  selections: SharedHostSelection[];
+}> {
+  try {
+    const response = await rbacApi.get("/rbac/shared-host-selections");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch shared host selections");
+  }
+}
+
+export async function selectSharedHost(
+  hostId: number,
+  folder: string | null = null,
+): Promise<{ selection: SharedHostSelection }> {
+  try {
+    const response = await rbacApi.put(
+      `/rbac/shared-host-selections/${hostId}`,
+      {
+        folder,
+      },
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "select shared host");
+  }
+}
+
+export async function removeSharedHostSelection(
+  hostId: number,
+): Promise<{ success: boolean; deleted: boolean }> {
+  try {
+    const response = await rbacApi.delete(
+      `/rbac/shared-host-selections/${hostId}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "remove shared host selection");
+  }
+}
+
 export async function getSharedHosts(): Promise<{
   sharedHosts: Array<{
     id: number;
