@@ -738,6 +738,24 @@ export const sharedHostSelections = sqliteTable(
   ],
 );
 
+export const personalHostSources = sqliteTable(
+  "personal_host_sources",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    personalHostId: integer("personal_host_id").notNull().references(() => hosts.id, { onDelete: "cascade" }),
+    sourceSharedHostId: integer("source_shared_host_id").notNull(),
+    sourceSnapshotAt: text("source_snapshot_at").notNull(),
+    sourceType: text("source_type").notNull().default("shared-host-import"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("personal_host_sources_user_source_unique").on(table.userId, table.sourceSharedHostId),
+    uniqueIndex("personal_host_sources_personal_host_unique").on(table.personalHostId),
+    index("idx_personal_host_sources_user_id").on(table.userId),
+  ],
+);
+
 export const sharedHostAuthOverrides = sqliteTable(
   "shared_host_auth_overrides",
   {

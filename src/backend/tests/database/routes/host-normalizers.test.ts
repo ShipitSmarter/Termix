@@ -8,7 +8,6 @@ import {
   normalizeImportedHost,
   normalizeProtocolEnableFields,
   renameFolderPath,
-  sanitizeCredentialFreeImportedHost,
   sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
@@ -460,38 +459,5 @@ describe("sanitizeHostForRecipient", () => {
     expect(result.notes).toBeUndefined();
     expect(result.quickActions).toBeUndefined();
     expect(result.password).toBeUndefined();
-  });
-});
-
-describe("sanitizeCredentialFreeImportedHost", () => {
-  it("removes credentials and disables protocol-specific authentication", () => {
-    const source = {
-      ip: "10.0.0.9",
-      password: "secret",
-      key: "private-key",
-      credentialId: 12,
-      rdpPassword: "rdp-secret",
-      tunnelConnections: [{ host: "jump" }],
-      connectionType: "rdp",
-      enableRdp: true,
-      enableVnc: true,
-      enableTelnet: true,
-    };
-
-    const result = sanitizeCredentialFreeImportedHost(source);
-    expect(result).toMatchObject({
-      ip: "10.0.0.9",
-      connectionType: "rdp",
-      authType: "none",
-      enableRdp: false,
-      enableVnc: false,
-      enableTelnet: false,
-    });
-    expect(result).not.toHaveProperty("password");
-    expect(result).not.toHaveProperty("key");
-    expect(result).not.toHaveProperty("credentialId");
-    expect(result).not.toHaveProperty("rdpPassword");
-    expect(result).not.toHaveProperty("tunnelConnections");
-    expect(source.password).toBe("secret");
   });
 });

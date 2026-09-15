@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import {
   getSharedHostSelections,
   getSharedHosts,
+  getSharedHostImportMetadata,
+  importSharedHosts,
   removeSharedHostSelection,
   selectSharedHost,
 } from "@/main-axios";
@@ -22,11 +24,12 @@ export function SharedHostsCatalog({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
     try {
-      const [{ sharedHosts }, { selections }] = await Promise.all([
+      const [{ sharedHosts }, { selections }, { imports }] = await Promise.all([
         getSharedHosts(),
         getSharedHostSelections(),
+        getSharedHostImportMetadata(),
       ]);
-      setRows(mergeSharedHostSelections(sharedHosts, selections));
+      setRows(mergeSharedHostSelections(sharedHosts, selections, imports));
     } catch {
       setError("Unable to load shared hosts.");
     } finally {
@@ -55,6 +58,24 @@ export function SharedHostsCatalog({ onClose }: { onClose: () => void }) {
     }
   }
 
+  async function importHost(host: SharedHostCatalogRow) {
+    setUpdatingHostId(host.id);
+    try {
+      const { results } = await importSharedHosts([host.id]);
+      const result = results[0];
+      if (result?.status === "already-imported")
+        toast.info("Already imported; existing copy unchanged.");
+      else if (result?.status === "created")
+        toast.success("Personal copy created; authentication not configured.");
+      await load();
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+    } catch {
+      toast.error(`Unable to import ${host.name ?? host.ip}.`);
+    } finally {
+      setUpdatingHostId(null);
+    }
+  }
+
   return (
     <section className="flex flex-col flex-1 min-h-0" aria-label="Shared Hosts">
       <header className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
@@ -62,7 +83,8 @@ export function SharedHostsCatalog({ onClose }: { onClose: () => void }) {
         <div className="flex-1 min-w-0">
           <h2 className="text-xs font-semibold truncate">Shared Hosts</h2>
           <p className="text-[10px] text-muted-foreground">
-            Choose shared hosts for your sidebar
+            Choose shared hosts for your sidebar. Imports are personal
+            snapshots; credentials are never copied.
           </p>
         </div>
         <button
@@ -121,17 +143,31 @@ export function SharedHostsCatalog({ onClose }: { onClose: () => void }) {
               </div>
               <button
                 type="button"
-                onClick={() => void toggle(host)}
-                disabled={updatingHostId === host.id}
-                aria-pressed={host.selected}
+                onClick={() => void importHost(host)}
+                disabled={updatingHostId === host.id || host.imported}
+                aria-pressed={host.imported}
                 className={`flex items-center gap-1 px-2 py-1 text-[10px] border rounded-sm transition-colors ${
-                  host.selected
+                  host.imported
                     ? "border-accent-brand/60 text-accent-brand bg-accent-brand/10"
                     : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 } disabled:opacity-50`}
               >
-                {host.selected && <Check className="size-3" />}
-                {host.selected ? "In Shared Hosts" : "Use shared host"}
+                {host.imported && <Check className="size-3" />}
+                {host.imported ? "Already imported" : "Import to My Hosts"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void toggle(host)}
+                disabled={updatingHostId === host.id}
+                aria-pressed={host.useSelected}
+                className={`flex items-center gap-1 px-2 py-1 text-[10px] border rounded-sm transition-colors ${
+                  host.useSelected
+                    ? "border-accent-brand/60 text-accent-brand bg-accent-brand/10"
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                } disabled:opacity-50`}
+              >
+                {host.useSelected && <Check className="size-3" />}
+                {host.useSelected ? "In Shared Hosts" : "Use shared host"}
               </button>
             </div>
           ))}

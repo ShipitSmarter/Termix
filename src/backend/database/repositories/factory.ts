@@ -50,6 +50,7 @@ import { FolderAccessRepository } from "./folder-access-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
+import { PersonalHostSourceRepository } from "./personal-host-source-repository.js";
 import { SharedHostSelectionRepository } from "./shared-host-selection-repository.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
@@ -472,6 +473,10 @@ export function createCurrentSharedHostAuthOverrideRepository(): SharedHostAuthO
       "shared_host_auth_override_repository_write",
     ),
   );
+}
+
+export function createCurrentPersonalHostSourceRepository(): PersonalHostSourceRepository {
+  return new PersonalHostSourceRepository(createCurrentRepositoryContext());
 }
 
 export function createCurrentSharedHostSelectionRepository(): SharedHostSelectionRepository {

@@ -746,6 +746,24 @@ export const sharedHostSelections = pgTable(
   ],
 );
 
+export const personalHostSources = pgTable(
+  "personal_host_sources",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+    personalHostId: integer("personal_host_id").notNull().references(() => hosts.id, { onDelete: "cascade" }),
+    sourceSharedHostId: integer("source_shared_host_id").notNull(),
+    sourceSnapshotAt: text("source_snapshot_at").notNull(),
+    sourceType: text("source_type").notNull().default("shared-host-import"),
+    createdAt: varchar("created_at", { length: 255 }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("personal_host_sources_user_source_unique").on(table.userId, table.sourceSharedHostId),
+    uniqueIndex("personal_host_sources_personal_host_unique").on(table.personalHostId),
+    index("idx_personal_host_sources_user_id").on(table.userId),
+  ],
+);
+
 export const sharedHostAuthOverrides = pgTable(
   "shared_host_auth_overrides",
   {

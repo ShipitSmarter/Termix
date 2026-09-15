@@ -327,6 +327,44 @@ export async function removeSharedHostSelection(
   }
 }
 
+export interface SharedHostImportMetadata {
+  sourceSharedHostId: number;
+  importedHostId: number;
+  sourceSnapshotAt: string;
+  sourceType: "shared-host-import";
+}
+
+export interface SharedHostImportResult {
+  sourceSharedHostId: number;
+  status: "created" | "already-imported" | "not-found" | "forbidden";
+  importedHostId?: number;
+}
+
+export async function getSharedHostImportMetadata(): Promise<{
+  imports: SharedHostImportMetadata[];
+}> {
+  try {
+    const response = await rbacApi.get("/rbac/shared-host-imports");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch shared host imports");
+  }
+}
+
+export async function importSharedHosts(
+  sourceHostIds: number[],
+): Promise<{ results: SharedHostImportResult[] }> {
+  try {
+    const response = await rbacApi.post("/rbac/shared-host-imports", {
+      sourceHostIds,
+      conflictPolicy: "skip",
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "import shared hosts");
+  }
+}
+
 export async function getSharedHosts(): Promise<{
   sharedHosts: Array<{
     id: number;
