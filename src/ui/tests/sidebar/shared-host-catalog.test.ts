@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { mergeSharedHostSelections } from "../../sidebar/shared-host-catalog";
+import {
+  mergeSharedHostSelections,
+  sharedCatalogHostToSSHHost,
+} from "../../sidebar/shared-host-catalog";
+import { buildHostTree } from "../../sidebar/build-host-tree";
 
 const host = (id: number) => ({
   id,
@@ -35,5 +39,42 @@ describe("mergeSharedHostSelections", () => {
       { id: 1, selected: false, selectedFolder: null },
       { id: 2, selected: true, selectedFolder: "Operations" },
     ]);
+  });
+
+  it("projects selected hosts into fixed sidebar roots without credentials", () => {
+    const selected = {
+      ...host(2),
+      selected: true,
+      selectedFolder: "Operations",
+    };
+    const projected = sharedCatalogHostToSSHHost(selected);
+    const tree = buildHostTree(
+      [
+        {
+          ...projected,
+          id: 99,
+          name: "personal",
+          folder: null,
+          isShared: false,
+        } as never,
+      ],
+      undefined,
+      [selected],
+    );
+
+    expect(tree.children.map((entry) => entry.name)).toEqual([
+      "My Hosts",
+      "Shared Hosts",
+    ]);
+    expect(tree.children[1]).toMatchObject({
+      children: [
+        {
+          name: "Operations",
+          children: [{ name: "host-2", isShared: true }],
+        },
+      ],
+    });
+    expect(projected).not.toHaveProperty("password");
+    expect(projected).not.toHaveProperty("key");
   });
 });

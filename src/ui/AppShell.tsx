@@ -174,6 +174,8 @@ import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
   getSSHFolders,
+  getSharedHosts,
+  getSharedHostSelections,
   getUserInfo,
   getOpenTabs,
   addOpenTab,
@@ -209,6 +211,7 @@ import { resolveHostTabType } from "@/lib/host-connection-tabs";
 import { changeAppLanguage, consumeLoginLanguage } from "@/i18n/i18n";
 import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
 import { buildHostTree } from "@/sidebar/build-host-tree";
+import { mergeSharedHostSelections } from "@/sidebar/shared-host-catalog";
 import {
   assignTabsToSplit,
   createSplitConfig,
@@ -1131,10 +1134,16 @@ export function AppShell({
   // Load real hosts from API
   const loadHosts = useCallback(async () => {
     try {
-      const [raw, folders] = await Promise.all([
+      const [raw, folders, sharedResult, selectionResult] = await Promise.all([
         getSSHHosts(),
         getSSHFolders().catch(() => []),
+        getSharedHosts().catch(() => ({ sharedHosts: [] })),
+        getSharedHostSelections().catch(() => ({ selections: [] })),
       ]);
+      const selectedSharedHosts = mergeSharedHostSelections(
+        sharedResult.sharedHosts,
+        selectionResult.selections,
+      ).filter((host) => host.selected);
       const converted = raw.map(sshHostToHost);
       setAllHosts(converted);
       const folderMeta = new Map<
@@ -1154,7 +1163,7 @@ export function AppShell({
           sortOrder: f.sortOrder ?? null,
         });
       }
-      setRealHostTree(buildHostTree(raw, folderMeta));
+      setRealHostTree(buildHostTree(raw, folderMeta, selectedSharedHosts));
     } catch {
       // Keep empty state on error
     } finally {

@@ -1,4 +1,5 @@
 import type { SharedHostSelection } from "@/api/rbac-api";
+import type { SSHHostWithStatus } from "@/main-axios";
 
 export interface SharedHostCatalogEntry {
   id: number;
@@ -17,6 +18,28 @@ export interface SharedHostCatalogEntry {
 export interface SharedHostCatalogRow extends SharedHostCatalogEntry {
   selected: boolean;
   selectedFolder: string | null;
+}
+
+/** Convert the credential-free catalog projection into the sidebar host shape. */
+export function sharedCatalogHostToSSHHost(
+  host: SharedHostCatalogRow,
+): SSHHostWithStatus {
+  return {
+    id: host.id,
+    name: host.name ?? host.ip,
+    ip: host.ip,
+    port: host.port,
+    username: host.username,
+    folder: host.selectedFolder,
+    tags: host.tags ?? undefined,
+    authType: "none",
+    connectionType: "ssh",
+    status: "unknown",
+    isShared: true,
+    permissionLevel:
+      host.permissionLevel as SSHHostWithStatus["permissionLevel"],
+    ownerUsername: host.ownerUsername,
+  } as unknown as SSHHostWithStatus;
 }
 
 export function mergeSharedHostSelections(
