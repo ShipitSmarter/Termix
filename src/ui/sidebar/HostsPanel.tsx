@@ -44,6 +44,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import {
   getSSHHosts,
   bulkImportSSHHosts,
@@ -997,13 +998,26 @@ export function HostsPanel({
               </DropdownMenu>
             </div>
             <div className="flex items-center border border-border shrink-0">
-              <button
-                onClick={() => setSharedHostsOpen(true)}
-                title="Shared Hosts"
-                className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-              >
-                <Users className="size-3.5" />
-              </button>
+              <Popover open={sharedHostsOpen} onOpenChange={setSharedHostsOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    title="Shared Hosts"
+                    className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                  >
+                    <Users className="size-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="right"
+                  align="start"
+                  className="w-[min(34rem,calc(100vw-2rem))] p-0"
+                >
+                  <SharedHostsCatalog
+                    onClose={() => setSharedHostsOpen(false)}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex items-center border border-border shrink-0">
               <button
@@ -1038,52 +1052,48 @@ export function HostsPanel({
         update={updateSidebarPrefs}
       />
 
-      {sharedHostsOpen ? (
-        <SharedHostsCatalog onClose={() => setSharedHostsOpen(false)} />
-      ) : (
-        <div
-          className={`flex flex-col flex-1 min-h-0 ${managerEditing ? "hidden" : ""}`}
-        >
-          <SidebarTree
-            children={
-              hostTree
-                ? groupHosts(
-                    applyFilters(
-                      sortHostTree(hostTree, sortKey, pinnedFirst),
-                      filterState,
-                    ),
-                    groupKey,
-                    groupLabel,
-                  ).children
-                : []
-            }
-            onOpenTab={onOpenTab}
-            onEditHost={onEditHost}
-            onShareHost={(host) => setShareModalHost(host)}
-            onProxmoxDiscover={(host) => {
-              const cfg = host.proxmoxConfig;
-              setProxmoxHostId(Number(host.id));
-              setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
-              setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
-              setProxmoxDefaultUsername(undefined);
-              setProxmoxDialogOpen(true);
-            }}
-            query={hostSearch.trim().toLowerCase()}
-            selectionMode={selectionMode}
-            onToggleSelectionMode={toggleSelectionMode}
-            loading={loading}
-            onExportSelected={(ids) => {
-              setExportPreselection(new Set(ids));
-              setExportDialogOpen(true);
-            }}
-            arrangeLocked={arrangeLocked}
-            density={sidebarPrefs.display.density}
-            trayTrigger={sidebarPrefs.display.trayTrigger}
-            showTags={sidebarPrefs.display.showTags}
-            openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
-          />
-        </div>
-      )}
+      <div
+        className={`flex flex-col flex-1 min-h-0 ${managerEditing ? "hidden" : ""}`}
+      >
+        <SidebarTree
+          children={
+            hostTree
+              ? groupHosts(
+                  applyFilters(
+                    sortHostTree(hostTree, sortKey, pinnedFirst),
+                    filterState,
+                  ),
+                  groupKey,
+                  groupLabel,
+                ).children
+              : []
+          }
+          onOpenTab={onOpenTab}
+          onEditHost={onEditHost}
+          onShareHost={(host) => setShareModalHost(host)}
+          onProxmoxDiscover={(host) => {
+            const cfg = host.proxmoxConfig;
+            setProxmoxHostId(Number(host.id));
+            setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
+            setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
+            setProxmoxDefaultUsername(undefined);
+            setProxmoxDialogOpen(true);
+          }}
+          query={hostSearch.trim().toLowerCase()}
+          selectionMode={selectionMode}
+          onToggleSelectionMode={toggleSelectionMode}
+          loading={loading}
+          onExportSelected={(ids) => {
+            setExportPreselection(new Set(ids));
+            setExportDialogOpen(true);
+          }}
+          arrangeLocked={arrangeLocked}
+          density={sidebarPrefs.display.density}
+          trayTrigger={sidebarPrefs.display.trayTrigger}
+          showTags={sidebarPrefs.display.showTags}
+          openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
+        />
+      </div>
 
       <div
         className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}

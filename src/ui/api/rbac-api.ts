@@ -290,7 +290,8 @@ export async function getSharedHostImportMetadata(): Promise<{
   imports: SharedHostImportMetadata[];
 }> {
   try {
-    const response = await rbacApi.get("/rbac/shared-host-imports");
+    const api = (await getConnectedRemoteApi()) ?? rbacApi;
+    const response = await api.get("/rbac/shared-host-imports");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch shared host imports");
@@ -301,7 +302,8 @@ export async function importSharedHosts(
   sourceHostIds: number[],
 ): Promise<{ results: SharedHostImportResult[] }> {
   try {
-    const response = await rbacApi.post("/rbac/shared-host-imports", {
+    const api = (await getConnectedRemoteApi()) ?? rbacApi;
+    const response = await api.post("/rbac/shared-host-imports", {
       sourceHostIds,
       conflictPolicy: "skip",
     });
