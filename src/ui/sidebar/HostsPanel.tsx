@@ -44,6 +44,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import {
   getSSHHosts,
   bulkImportSSHHosts,
@@ -1008,13 +1009,26 @@ export function HostsPanel({
               </DropdownMenu>
             </div>
             <div className="flex items-center border border-border shrink-0">
-              <button
-                onClick={() => setSharedHostsOpen(true)}
-                title="Shared Hosts"
-                className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-              >
-                <Users className="size-3.5" />
-              </button>
+              <Popover open={sharedHostsOpen} onOpenChange={setSharedHostsOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    title="Shared Hosts"
+                    className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                  >
+                    <Users className="size-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="right"
+                  align="start"
+                  className="w-[min(34rem,calc(100vw-2rem))] p-0"
+                >
+                  <SharedHostsCatalog
+                    onClose={() => setSharedHostsOpen(false)}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex items-center border border-border shrink-0">
               <button
@@ -1048,6 +1062,7 @@ export function HostsPanel({
         preferences={sidebarPrefs}
         update={updateSidebarPrefs}
       />
+
 
       {sharedHostsOpen ? (
         <SharedHostsCatalog onClose={() => setSharedHostsOpen(false)} />
@@ -1096,6 +1111,7 @@ export function HostsPanel({
           </div>
         )
       )}
+
 
       <div
         className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}

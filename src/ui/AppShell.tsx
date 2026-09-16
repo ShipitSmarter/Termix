@@ -176,6 +176,7 @@ import {
   getSSHFolders,
   getSharedHosts,
   getSharedHostSelections,
+  getSharedHostImportMetadata,
   getUserInfo,
   getOpenTabs,
   addOpenTab,
@@ -1134,12 +1135,14 @@ export function AppShell({
   // Load real hosts from API
   const loadHosts = useCallback(async () => {
     try {
-      const [raw, folders, sharedResult, selectionResult] = await Promise.all([
-        getSSHHosts(),
-        getSSHFolders().catch(() => []),
-        getSharedHosts().catch(() => ({ sharedHosts: [] })),
-        getSharedHostSelections().catch(() => ({ selections: [] })),
-      ]);
+      const [raw, folders, sharedResult, selectionResult, importResult] =
+        await Promise.all([
+          getSSHHosts(),
+          getSSHFolders().catch(() => []),
+          getSharedHosts().catch(() => ({ sharedHosts: [] })),
+          getSharedHostSelections().catch(() => ({ selections: [] })),
+          getSharedHostImportMetadata().catch(() => ({ imports: [] })),
+        ]);
       const selectedSharedHosts = mergeSharedHostSelections(
         sharedResult.sharedHosts,
         selectionResult.selections,
@@ -1163,7 +1166,14 @@ export function AppShell({
           sortOrder: f.sortOrder ?? null,
         });
       }
-      setRealHostTree(buildHostTree(raw, folderMeta, selectedSharedHosts));
+      setRealHostTree(
+        buildHostTree(
+          raw,
+          folderMeta,
+          selectedSharedHosts,
+          importResult.imports,
+        ),
+      );
     } catch {
       // Keep empty state on error
     } finally {

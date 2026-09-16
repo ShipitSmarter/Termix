@@ -50,6 +50,27 @@ export function sharedCatalogHostToSSHHost(
   } as unknown as SSHHostWithStatus;
 }
 
+export function filterHostsForSharedVisibility<
+  T extends { id: string | number; isShared?: boolean },
+>(
+  hosts: T[],
+  selectedHostIds: Iterable<number>,
+  imports: SharedHostImportMetadata[] = [],
+): T[] {
+  const selected = new Set(selectedHostIds);
+  const importedSourceByPersonalId = new Map(
+    imports.map((entry) => [entry.importedHostId, entry.sourceSharedHostId]),
+  );
+
+  return hosts.filter((host) => {
+    const hostId = Number(host.id);
+    if (host.isShared && !selected.has(hostId)) return false;
+
+    const importedSourceId = importedSourceByPersonalId.get(hostId);
+    return importedSourceId === undefined || !selected.has(importedSourceId);
+  });
+}
+
 export function mergeSharedHostSelections(
   hosts: SharedHostCatalogEntry[],
   selections: SharedHostSelection[],

@@ -30,6 +30,8 @@ import { CONNECTION_STATES } from "@/types/index";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
+  getSharedHostSelections,
+  getSharedHostImportMetadata,
   getUptime,
   getVersionInfo,
   releaseUrlFrom,
@@ -67,6 +69,7 @@ import {
 } from "@/hooks/use-status-color-scheme";
 import { useServerStatus } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
+import { filterHostsForSharedVisibility } from "@/sidebar/shared-host-catalog";
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 import {
   isValidServiceLinkUrl,
@@ -1417,8 +1420,20 @@ export function DashboardTab({
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      const raw = await getSSHHosts().catch(() => []);
-      const mapped = raw.map(sshHostToHost);
+      const [raw, selectionResult, importResult] = await Promise.all([
+        getSSHHosts().catch(() => []),
+        getSharedHostSelections().catch(() => ({ selections: [] })),
+        getSharedHostImportMetadata().catch(() => ({ imports: [] })),
+      ]);
+      const selectedHostIds = selectionResult.selections.map(
+        (selection) => selection.hostId,
+      );
+      const visibleRaw = filterHostsForSharedVisibility(
+        raw,
+        selectedHostIds,
+        importResult.imports,
+      );
+      const mapped = visibleRaw.map(sshHostToHost);
       const statusHosts = mapped.filter(isStatusCheckEnabled);
       if (mounted) setHosts(mapped);
       if (isVisible) {
@@ -1488,8 +1503,20 @@ export function DashboardTab({
 
     const metricsInterval = setInterval(async () => {
       if (document.visibilityState === "hidden") return;
-      const raw = await getSSHHosts().catch(() => []);
-      const mapped = raw.map(sshHostToHost);
+      const [raw, selectionResult, importResult] = await Promise.all([
+        getSSHHosts().catch(() => []),
+        getSharedHostSelections().catch(() => ({ selections: [] })),
+        getSharedHostImportMetadata().catch(() => ({ imports: [] })),
+      ]);
+      const selectedHostIds = selectionResult.selections.map(
+        (selection) => selection.hostId,
+      );
+      const visibleRaw = filterHostsForSharedVisibility(
+        raw,
+        selectedHostIds,
+        importResult.imports,
+      );
+      const mapped = visibleRaw.map(sshHostToHost);
       const statusHosts = mapped.filter(isStatusCheckEnabled);
       if (mounted) setHosts(mapped);
       fetchMetrics(statusHosts).catch(() => {});

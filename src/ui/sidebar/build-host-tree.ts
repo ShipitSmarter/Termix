@@ -1,7 +1,10 @@
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { HostFolder } from "@/types/ui-types";
-import type { SharedHostCatalogRow } from "./shared-host-catalog";
-import { sharedCatalogHostToSSHHost } from "./shared-host-catalog";
+import type { SharedHostImportMetadata } from "@/api/rbac-api";
+import {
+  sharedCatalogHostToSSHHost,
+  type SharedHostCatalogRow,
+} from "./shared-host-catalog";
 import { sshHostToHost } from "./HostManagerData";
 
 /**
@@ -32,6 +35,7 @@ export function buildHostTree(
     }
   >,
   selectedSharedHosts?: SharedHostCatalogRow[],
+  sharedHostImports: SharedHostImportMetadata[] = [],
 ): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
   const folderMap = new Map<string, HostFolder>();
@@ -68,9 +72,24 @@ export function buildHostTree(
   // Granted shared hosts are projected into the dedicated Shared Hosts root
   // only when the user selects them. They must not also leak into My Hosts;
   // imported personal copies are not marked shared and remain in My Hosts.
-  const mappedHosts = hosts
-    .filter((host) => !selectedSharedHosts || !host.isShared)
-    .map((h) => sshHostToHost(h));
+  const visibleHosts = selectedSharedHosts
+    ? hosts.filter((host) => {
+        if (host.isShared) return false;
+        const importedSourceId = new Map(
+          sharedHostImports.map((entry) => [
+            entry.importedHostId,
+            entry.sourceSharedHostId,
+          ]),
+        ).get(Number(host.id));
+        return (
+          importedSourceId === undefined ||
+          !selectedSharedHosts.some(
+            (selected) => selected.id === importedSourceId,
+          )
+        );
+      })
+    : hosts;
+  const mappedHosts = visibleHosts.map((h) => sshHostToHost(h));
   const hostsById = new Map(mappedHosts.map((h) => [h.id, h]));
 
   // The backend rejects cycles on write, but stale/imported/synced data could
