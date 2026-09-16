@@ -69,8 +69,12 @@ export function SharedHostsCatalog({ onClose }: { onClose: () => void }) {
         toast.success("Personal copy created; authentication not configured.");
       await load();
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-    } catch {
-      toast.error(`Unable to import ${host.name ?? host.ip}.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : `Unable to import ${host.name ?? host.ip}.`,
+      );
     } finally {
       setUpdatingHostId(null);
     }

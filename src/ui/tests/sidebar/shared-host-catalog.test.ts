@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  filterHostsForSharedVisibility,
   mergeSharedHostSelections,
   sharedCatalogHostToSSHHost,
 } from "../../sidebar/shared-host-catalog";
@@ -71,9 +72,24 @@ describe("mergeSharedHostSelections", () => {
           folder: null,
           isShared: true,
         } as never,
+        {
+          ...projected,
+          id: 100,
+          name: "imported-copy",
+          folder: null,
+          isShared: false,
+        } as never,
       ],
       undefined,
       [selected],
+      [
+        {
+          sourceSharedHostId: 2,
+          importedHostId: 100,
+          sourceSnapshotAt: "2026-09-16T00:00:00.000Z",
+          sourceType: "shared-host-import",
+        },
+      ],
     );
 
     expect(tree.children[0]).toMatchObject({
@@ -126,5 +142,32 @@ describe("mergeSharedHostSelections", () => {
     });
     expect(projected).not.toHaveProperty("password");
     expect(projected).not.toHaveProperty("key");
+  });
+
+  it("hides unselected shared hosts and deduplicates selected imports", () => {
+    const hosts = [
+      { id: 1, isShared: true, name: "unselected" },
+      { id: 2, isShared: true, name: "selected" },
+      { id: 10, isShared: false, name: "imported-copy" },
+      { id: 11, isShared: false, name: "personal" },
+    ];
+
+    expect(
+      filterHostsForSharedVisibility(
+        hosts,
+        [2],
+        [
+          {
+            sourceSharedHostId: 2,
+            importedHostId: 10,
+            sourceSnapshotAt: "2026-09-16T00:00:00.000Z",
+            sourceType: "shared-host-import",
+          },
+        ],
+      ),
+    ).toEqual([
+      { id: 2, isShared: true, name: "selected" },
+      { id: 11, isShared: false, name: "personal" },
+    ]);
   });
 });
