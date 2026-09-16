@@ -1032,17 +1032,21 @@ export function HostsPanel({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="text-xs">
                   <DropdownMenuItem
+                    className="text-accent-brand focus:text-accent-brand"
                     onClick={() =>
                       window.dispatchEvent(
                         new CustomEvent("host-manager:add-host"),
                       )
                     }
                   >
-                    <Plus className="size-3.5 mr-2" />
+                    <Plus className="size-3.5 mr-2 text-accent-brand" />
                     {t("hosts.newHost")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={openSharedHostsPage}>
-                    <Users className="size-3.5 mr-2" />
+                  <DropdownMenuItem
+                    className="text-accent-brand focus:text-accent-brand"
+                    onClick={openSharedHostsPage}
+                  >
+                    <Users className="size-3.5 mr-2 text-accent-brand" />
                     {t("hosts.sharedHost")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
