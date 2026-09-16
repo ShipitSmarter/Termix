@@ -359,7 +359,6 @@ export async function importSharedHosts(
     const api = (await getConnectedRemoteApi()) ?? rbacApi;
     const response = await api.post("/rbac/shared-host-imports", {
       sourceHostIds,
-      conflictPolicy: "skip",
     });
     return response.data;
   } catch (error) {

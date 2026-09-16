@@ -775,6 +775,8 @@
     "tags": "Tags",
     "pin": "Pin",
     "addHost": "Add Host",
+    "newHost": "New Host",
+    "sharedHost": "Shared Host",
     "editHost": "Edit Host",
     "cloneHost": "Clone Host",
     "enableTerminal": "Enable Terminal",

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { HostData } from "@/types/index";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowLeft,
   ArrowUpDown,
   Check,
   ChevronsDownUp,
@@ -44,7 +45,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import {
   getSSHHosts,
   bulkImportSSHHosts,
@@ -208,7 +208,7 @@ export function HostsPanel({
   const [managerEditing, setManagerEditing] = useState(false);
   const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [sharedHostsOpen, setSharedHostsOpen] = useState(false);
+  const [sharedHostsPageOpen, setSharedHostsPageOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [rawHosts, setRawHosts] = useState<SSHHostWithStatus[]>([]);
   const [shareModalHost, setShareModalHost] = useState<Host | null>(null);
@@ -335,6 +335,16 @@ export function HostsPanel({
     setSelectionMode((v) => !v);
   }
 
+  function openSharedHostsPage() {
+    setSharedHostsPageOpen(true);
+    onEditingChange?.(true);
+  }
+
+  function closeSharedHostsPage() {
+    setSharedHostsPageOpen(false);
+    onEditingChange?.(false);
+  }
+
   async function handleRefresh() {
     setRefreshing(true);
     try {
@@ -411,7 +421,7 @@ export function HostsPanel({
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-      {!managerEditing && (
+      {!managerEditing && !sharedHostsPageOpen && (
         <div className="flex flex-col px-2 py-1.5 shrink-0 border-b border-border/60 gap-1.5">
           <div className="flex items-center gap-2 px-2.5 h-7 bg-muted/60 border border-border/60 rounded-none">
             <Search className="size-3 text-muted-foreground/60 shrink-0" />
@@ -1009,28 +1019,6 @@ export function HostsPanel({
               </DropdownMenu>
             </div>
             <div className="flex items-center border border-border shrink-0">
-              <Popover open={sharedHostsOpen} onOpenChange={setSharedHostsOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    title="Shared Hosts"
-                    className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-                  >
-                    <Users className="size-3.5" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  side="right"
-                  align="start"
-                  className="w-[min(34rem,calc(100vw-2rem))] p-0"
-                >
-                  <SharedHostsCatalog
-                    onClose={() => setSharedHostsOpen(false)}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="flex items-center border border-border shrink-0">
               <button
                 onClick={() => setCustomizePanelOpen(true)}
                 title={t("hosts.customizeSidebar")}
@@ -1040,18 +1028,36 @@ export function HostsPanel({
               </button>
             </div>
             <div className="flex items-center border border-accent-brand/30 ml-auto shrink-0">
-              <button
-                onClick={() =>
-                  window.dispatchEvent(new CustomEvent("host-manager:add-host"))
-                }
-                title={t("hosts.addHost")}
-                className="flex items-center justify-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 transition-colors"
-              >
-                <Plus className="size-3 shrink-0" />
-                <span className="hidden min-[280px]:inline">
-                  {t("hosts.addHost")}
-                </span>
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title={t("hosts.addHost")}
+                    className="flex items-center justify-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 transition-colors"
+                  >
+                    <Plus className="size-3 shrink-0" />
+                    <span className="hidden min-[280px]:inline">
+                      {t("hosts.addHost")}
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent("host-manager:add-host"),
+                      )
+                    }
+                  >
+                    <Plus className="size-3.5 mr-2" />
+                    {t("hosts.newHost")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={openSharedHostsPage}>
+                    <Users className="size-3.5 mr-2" />
+                    {t("hosts.sharedHost")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -1062,6 +1068,7 @@ export function HostsPanel({
         preferences={sidebarPrefs}
         update={updateSidebarPrefs}
       />
+
 
 
       {sharedHostsOpen ? (
@@ -1112,11 +1119,33 @@ export function HostsPanel({
         )
       )}
 
+ 883acdd0 (fix: repair shared host import and integrate add flow)
 
       <div
-        className={managerEditing ? "flex flex-col flex-1 min-h-0" : "hidden"}
+        className={
+          managerEditing || sharedHostsPageOpen
+            ? "flex flex-col flex-1 min-h-0"
+            : "hidden"
+        }
       >
-        <HostManager onEditingChange={handleEditingChange} active={active} />
+        {sharedHostsPageOpen ? (
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <button
+              type="button"
+              onClick={closeSharedHostsPage}
+              className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors border-b border-border/50 shrink-0"
+            >
+              <ArrowLeft className="size-3.5 shrink-0" />
+              <span>{t("hosts.backToHosts")}</span>
+            </button>
+            <SharedHostsCatalog
+              onClose={closeSharedHostsPage}
+              showHeader={false}
+            />
+          </div>
+        ) : (
+          <HostManager onEditingChange={handleEditingChange} active={active} />
+        )}
       </div>
 
       <HostShareModal

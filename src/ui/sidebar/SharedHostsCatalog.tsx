@@ -14,7 +14,13 @@ import {
   type SharedHostCatalogRow,
 } from "./shared-host-catalog";
 
-export function SharedHostsCatalog({ onClose }: { onClose: () => void }) {
+export function SharedHostsCatalog({
+  onClose,
+  showHeader = true,
+}: {
+  onClose: () => void;
+  showHeader?: boolean;
+}) {
   const [rows, setRows] = useState<SharedHostCatalogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingHostId, setUpdatingHostId] = useState<number | null>(null);
@@ -82,35 +88,56 @@ export function SharedHostsCatalog({ onClose }: { onClose: () => void }) {
 
   return (
     <section className="flex flex-col flex-1 min-h-0" aria-label="Shared Hosts">
-      <header className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
-        <Users className="size-4 text-accent-brand" />
-        <div className="flex-1 min-w-0">
-          <h2 className="text-xs font-semibold truncate">Shared Hosts</h2>
-          <p className="text-[10px] text-muted-foreground">
-            Choose shared hosts for your sidebar. Imports are personal
-            snapshots; credentials are never copied.
-          </p>
+      {showHeader && (
+        <header className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
+          <Users className="size-4 text-accent-brand" />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xs font-semibold truncate">Shared Hosts</h2>
+            <p className="text-[10px] text-muted-foreground">
+              Choose shared hosts for your sidebar. Imports are personal
+              snapshots; credentials are never copied.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            aria-label="Refresh shared hosts"
+            title="Refresh shared hosts"
+          >
+            <RefreshCw
+              className={`size-3.5 ${loading ? "animate-spin" : ""}`}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close Shared Hosts"
+            title="Close Shared Hosts"
+          >
+            <X className="size-3.5" />
+          </button>
+        </header>
+      )}
+      {!showHeader && (
+        <div className="flex items-center justify-end px-3 py-2 border-b border-border/60 shrink-0">
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+            aria-label="Refresh shared hosts"
+            title="Refresh shared hosts"
+          >
+            <RefreshCw
+              className={`size-3.5 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          disabled={loading}
-          className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          aria-label="Refresh shared hosts"
-          title="Refresh shared hosts"
-        >
-          <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 text-muted-foreground hover:text-foreground"
-          aria-label="Close Shared Hosts"
-          title="Close Shared Hosts"
-        >
-          <X className="size-3.5" />
-        </button>
-      </header>
+      )}
 
       {error ? (
         <div className="p-4 text-xs text-destructive">
