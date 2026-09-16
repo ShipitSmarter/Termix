@@ -1050,14 +1050,14 @@ export function HostsPanel({
                       )
                     }
                   >
-                    <Plus className="size-3.5 mr-2 text-accent-brand" />
+                    <Plus className="size-3.5 mr-2 !text-accent-brand" />
                     {t("hosts.newHost")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-accent-brand focus:text-accent-brand focus:[&_svg]:text-accent-brand data-[highlighted]:[&_svg]:text-accent-brand"
                     onClick={openSharedHostsPage}
                   >
-                    <Users className="size-3.5 mr-2 text-accent-brand" />
+                    <Users className="size-3.5 mr-2 !text-accent-brand" />
                     {t("hosts.sharedHost")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
