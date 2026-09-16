@@ -1043,7 +1043,7 @@ export function HostsPanel({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="text-xs">
                   <DropdownMenuItem
-                    className="text-accent-brand focus:text-accent-brand focus:[&_svg]:text-accent-brand data-[highlighted]:[&_svg]:text-accent-brand"
+                    className="text-accent-brand focus:text-accent-brand focus:**:!text-accent-brand data-[highlighted]:**:!text-accent-brand"
                     onClick={() =>
                       window.dispatchEvent(
                         new CustomEvent("host-manager:add-host"),
@@ -1054,7 +1054,7 @@ export function HostsPanel({
                     {t("hosts.newHost")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="text-accent-brand focus:text-accent-brand focus:[&_svg]:text-accent-brand data-[highlighted]:[&_svg]:text-accent-brand"
+                    className="text-accent-brand focus:text-accent-brand focus:**:!text-accent-brand data-[highlighted]:**:!text-accent-brand"
                     onClick={openSharedHostsPage}
                   >
                     <Users className="size-3.5 mr-2 !text-accent-brand" />
