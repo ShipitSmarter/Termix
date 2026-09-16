@@ -32,6 +32,16 @@ export function folderHostCount(folder: HostFolder): {
   return { total, online };
 }
 
+export function formatHostCount({
+  online,
+  total,
+}: {
+  online: number;
+  total: number;
+}): string {
+  return `${online}/${total}`;
+}
+
 export function FolderItem({
   folder,
   depth = 0,
@@ -279,12 +289,15 @@ export function FolderItem({
                 </span>
               </span>
               <span className="flex items-center gap-1 text-[10px] tabular-nums shrink-0 ml-1 px-1.5 py-[1px] bg-muted/70">
-                {online > 0 && (
-                  <span className="text-accent-brand font-semibold">
-                    {online}
-                  </span>
-                )}
-                <span className="text-muted-foreground/50">/{total}</span>
+                <span
+                  className={
+                    online > 0
+                      ? "text-accent-brand font-semibold"
+                      : "text-muted-foreground/50"
+                  }
+                >
+                  {formatHostCount({ online, total })}
+                </span>
               </span>
               {!isGroup && (
                 <FolderActions

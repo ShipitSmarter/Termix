@@ -65,7 +65,12 @@ export function buildHostTree(
     for (const path of folderMeta.keys()) getOrCreateFolder(path);
   }
 
-  const mappedHosts = hosts.map((h) => sshHostToHost(h));
+  // Granted shared hosts are projected into the dedicated Shared Hosts root
+  // only when the user selects them. They must not also leak into My Hosts;
+  // imported personal copies are not marked shared and remain in My Hosts.
+  const mappedHosts = hosts
+    .filter((host) => !selectedSharedHosts || !host.isShared)
+    .map((h) => sshHostToHost(h));
   const hostsById = new Map(mappedHosts.map((h) => [h.id, h]));
 
   // The backend rejects cycles on write, but stale/imported/synced data could
