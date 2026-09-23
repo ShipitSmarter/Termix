@@ -9,19 +9,21 @@ import {
 import { HomepageSelector } from "../../../features/homepage/toolbar/HomepageSelector";
 
 const createHomepageProfile = vi.fn();
+const importHomepageProfile = vi.fn();
+const updateHomepageProfileName = vi.fn();
+const deleteHomepageProfile = vi.fn();
 const getRoles = vi.fn().mockResolvedValue({ roles: [] });
-const getUserList = vi.fn().mockResolvedValue({ users: [] });
 vi.mock("@/api/homepage-api", () => ({
   createHomepageProfile: (...args: unknown[]) => createHomepageProfile(...args),
-  importHomepageProfile: vi.fn(),
+  importHomepageProfile: (...args: unknown[]) => importHomepageProfile(...args),
   shareHomepageProfile: vi.fn(),
   updateHomepageProfile: vi.fn(),
+  updateHomepageProfileName: (...args: unknown[]) =>
+    updateHomepageProfileName(...args),
+  deleteHomepageProfile: (...args: unknown[]) => deleteHomepageProfile(...args),
 }));
 vi.mock("@/api/rbac-api", () => ({
   getRoles: (...args: unknown[]) => getRoles(...args),
-}));
-vi.mock("@/api/user-management-api", () => ({
-  getUserList: (...args: unknown[]) => getUserList(...args),
 }));
 
 afterEach(() => {
@@ -78,7 +80,7 @@ describe("HomepageSelector profile management", () => {
     expect(baseProps.onChange).toHaveBeenCalledWith(8);
   });
 
-  it("loads role and user choices for profile grants", async () => {
+  it("loads role choices for profile grants", async () => {
     getRoles.mockResolvedValue({
       roles: [
         {
@@ -93,17 +95,7 @@ describe("HomepageSelector profile management", () => {
         },
       ],
     });
-    getUserList.mockResolvedValue({
-      users: [
-        {
-          userId: "user-2",
-          username: "Alice",
-          is_admin: false,
-          is_oidc: false,
-          totp_enabled: false,
-        },
-      ],
-    });
+
     render(<HomepageSelector {...baseProps} />);
     fireEvent.click(screen.getByRole("button", { name: "Manage" }));
     fireEvent.change(screen.getByLabelText("Team grant type"), {
@@ -111,10 +103,7 @@ describe("HomepageSelector profile management", () => {
     });
     await waitFor(() => expect(screen.getByText("Operators (7)")).toBeTruthy());
     expect(screen.getByRole("option", { name: "Operators (7)" })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Team grant type"), {
-      target: { value: "user" },
-    });
-    expect(screen.getByRole("option", { name: "Alice (user-2)" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Alice (user-2)" })).toBeNull();
   });
 
   it("uses dark styling for profile management selects", () => {
@@ -126,6 +115,41 @@ describe("HomepageSelector profile management", () => {
     expect(screen.getByLabelText("Team grant type").className).toContain(
       "bg-card",
     );
+  });
+
+  it("hides everyone and user grants while retaining role grants", () => {
+    render(<HomepageSelector {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    expect(
+      screen.queryByRole("option", { name: "Everyone signed in" }),
+    ).toBeNull();
+    expect(screen.getByRole("option", { name: "Role ID" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "User ID" })).toBeNull();
+  });
+
+  it("requires a name before importing a copied Homepage", async () => {
+    const shared = { ...baseProps.profiles[0], owned: false, name: "Shared" };
+    render(<HomepageSelector {...baseProps} profiles={[shared]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+    expect(importHomepageProfile).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Imported profile name")).toBeTruthy();
+  });
+
+  it("renames and deletes an owned Homepage", async () => {
+    render(<HomepageSelector {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    fireEvent.click(screen.getByRole("button", { name: "Rename Team" }));
+    fireEvent.change(screen.getByLabelText("Team profile name"), {
+      target: { value: "Renamed Team" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+    await waitFor(() =>
+      expect(updateHomepageProfileName).toHaveBeenCalledWith(4, "Renamed Team"),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(screen.getByRole("button", { name: "Delete Team" }));
+    await waitFor(() => expect(deleteHomepageProfile).toHaveBeenCalledWith(4));
   });
 
   it("keeps profile controls from starting a canvas gesture", () => {
