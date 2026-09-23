@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type {
   HomepageLayoutData,
   HomepageProfile,
@@ -10,6 +10,8 @@ import {
   shareHomepageProfile,
   updateHomepageProfile,
 } from "@/api/homepage-api";
+import { getRoles } from "@/api/rbac-api";
+import { getUserList } from "@/api/user-management-api";
 
 interface HomepageSelectorProps {
   profiles: HomepageProfile[];
@@ -38,6 +40,28 @@ export function HomepageSelector({
   const [grantValue, setGrantValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [roles, setRoles] = useState<import("@/main-axios").Role[]>([]);
+  const [users, setUsers] = useState<import("@/main-axios").UserInfo[]>([]);
+  const [targetsLoading, setTargetsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setTargetsLoading(true);
+    Promise.allSettled([getRoles(), getUserList()]).then(
+      ([rolesResult, usersResult]) => {
+        if (!active) return;
+        if (rolesResult.status === "fulfilled")
+          setRoles(rolesResult.value.roles);
+        if (usersResult.status === "fulfilled")
+          setUsers(usersResult.value.users);
+        setTargetsLoading(false);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   const owned = profiles.filter((profile) => profile.owned);
 
@@ -227,6 +251,8 @@ export function HomepageSelector({
                   Visibility
                   <select
                     aria-label={`${profile.name} visibility`}
+                    className="border border-border bg-card px-2 py-1 text-xs text-foreground"
+                    style={{ colorScheme: "dark" }}
                     value={
                       profile.visibility === "authenticated"
                         ? "authenticated"
@@ -247,23 +273,46 @@ export function HomepageSelector({
                 <div className="mt-2 flex gap-1">
                   <select
                     aria-label={`${profile.name} grant type`}
+                    className="border border-border bg-card px-2 py-1 text-xs text-foreground"
+                    style={{ colorScheme: "dark" }}
                     value={grantKind}
-                    onChange={(event) =>
-                      setGrantKind(event.target.value as typeof grantKind)
-                    }
+                    onChange={(event) => {
+                      setGrantKind(event.target.value as typeof grantKind);
+                      setGrantValue("");
+                    }}
                   >
                     <option value="authenticated">Everyone signed in</option>
                     <option value="role">Role ID</option>
                     <option value="user">User ID</option>
                   </select>
                   {grantKind !== "authenticated" && (
-                    <input
+                    <select
                       aria-label="Grant value"
-                      className="min-w-0 flex-1 border border-border bg-background px-2 py-1"
+                      className="min-w-0 flex-1 border border-border bg-background px-2 py-1 text-xs text-foreground"
+                      style={{ colorScheme: "dark" }}
                       value={grantValue}
+                      disabled={busy || targetsLoading}
                       onChange={(event) => setGrantValue(event.target.value)}
-                      placeholder={grantKind === "role" ? "Role ID" : "User ID"}
-                    />
+                    >
+                      <option value="">
+                        {targetsLoading
+                          ? "Loading..."
+                          : grantKind === "role"
+                            ? "Select a role"
+                            : "Select a user"}
+                      </option>
+                      {grantKind === "role"
+                        ? roles.map((role) => (
+                            <option key={role.id} value={String(role.id)}>
+                              {role.displayName} ({role.id})
+                            </option>
+                          ))
+                        : users.map((user) => (
+                            <option key={user.userId} value={user.userId}>
+                              {user.username} ({user.userId})
+                            </option>
+                          ))}
+                    </select>
                   )}
                   <button
                     type="button"
