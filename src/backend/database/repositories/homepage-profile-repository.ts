@@ -115,6 +115,21 @@ export class HomepageProfileRepository {
     await this.onWrite?.();
   }
 
+  async updateName(profileId: number, name: string): Promise<void> {
+    await this.context.drizzle
+      .update(homepageProfiles)
+      .set({ name })
+      .where(eq(homepageProfiles.id, profileId));
+    await this.onWrite?.();
+  }
+
+  async delete(profileId: number): Promise<void> {
+    await this.context.drizzle
+      .delete(homepageProfiles)
+      .where(eq(homepageProfiles.id, profileId));
+    await this.onWrite?.();
+  }
+
   async listVisible(
     userId: string,
     roleIds: number[],
@@ -147,10 +162,14 @@ export class HomepageProfileRepository {
     );
   }
 
-  async importCopy(userId: string, sourceId: number): Promise<HomepageProfile> {
+  async importCopy(
+    userId: string,
+    sourceId: number,
+    name: string,
+  ): Promise<HomepageProfile> {
     const source = await this.hydrateById(sourceId);
     if (!source) throw new Error("Homepage profile not found");
-    return this.create(userId, `${source.name} (copy)`, {
+    return this.create(userId, name, {
       entries: source.items.map((item) => ({
         typeId: item.typeId,
         title: item.title,

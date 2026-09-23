@@ -47,13 +47,34 @@ describe("HomepageProfileRepository", () => {
     await repo.grant(profile.id, { kind: "authenticated" });
 
     expect(await repo.listVisible("recipient", [])).toHaveLength(1);
-    const imported = await repo.importCopy("recipient", profile.id);
+    const imported = await repo.importCopy(
+      "recipient",
+      profile.id,
+      "Shared from team",
+    );
     expect(imported.ownerId).toBe("recipient");
+    expect(imported.name).toBe("Shared from team");
     expect(imported.id).not.toBe(profile.id);
     expect(await repo.listVisible("recipient", [])).toHaveLength(2);
   });
 
-  it("supports user and role grants without exposing private profiles", async () => {
+  it("supports renaming and deleting owned profiles", async () => {
+    const repo = await repository();
+    const profile = await repo.create("owner", "Before", {
+      entries: [],
+      layout: {},
+    });
+    await repo.updateName(profile.id, "After");
+    expect(
+      (await repo.listVisible("owner", [])).find(
+        (item) => item.id === profile.id,
+      )?.name,
+    ).toBe("After");
+    await repo.delete(profile.id);
+    expect(await repo.listVisible("owner", [])).toHaveLength(0);
+  });
+
+  it("supports role grants without exposing private profiles", async () => {
     const repo = await repository();
     const profile = await repo.create("owner", "Role profile", {
       entries: [],

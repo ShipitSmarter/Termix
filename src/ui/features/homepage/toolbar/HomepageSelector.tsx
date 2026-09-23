@@ -9,9 +9,10 @@ import {
   importHomepageProfile,
   shareHomepageProfile,
   updateHomepageProfile,
+  updateHomepageProfileName,
+  deleteHomepageProfile,
 } from "@/api/homepage-api";
 import { getRoles } from "@/api/rbac-api";
-import { getUserList } from "@/api/user-management-api";
 
 interface HomepageSelectorProps {
   profiles: HomepageProfile[];
@@ -34,28 +35,29 @@ export function HomepageSelector({
 }: HomepageSelectorProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [grantKind, setGrantKind] = useState<"authenticated" | "role" | "user">(
-    "authenticated",
-  );
+  const [grantKind, setGrantKind] = useState<"role">("role");
   const [grantValue, setGrantValue] = useState("");
+  const [renameProfileId, setRenameProfileId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [importProfileId, setImportProfileId] = useState<number | null>(null);
+  const [importName, setImportName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [roles, setRoles] = useState<import("@/main-axios").Role[]>([]);
-  const [users, setUsers] = useState<import("@/main-axios").UserInfo[]>([]);
   const [targetsLoading, setTargetsLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     let active = true;
     setTargetsLoading(true);
-    Promise.allSettled([getRoles(), getUserList()]).then(
-      ([rolesResult, usersResult]) => {
+    getRoles().then(
+      (result) => {
         if (!active) return;
-        if (rolesResult.status === "fulfilled")
-          setRoles(rolesResult.value.roles);
-        if (usersResult.status === "fulfilled")
-          setUsers(usersResult.value.users);
+        setRoles(result.roles);
         setTargetsLoading(false);
+      },
+      () => {
+        if (active) setTargetsLoading(false);
       },
     );
     return () => {
@@ -111,20 +113,15 @@ export function HomepageSelector({
 
   async function addGrant(profile: HomepageProfile) {
     const value = grantValue.trim();
-    if (grantKind !== "authenticated" && !value)
-      return setMessage("Enter a user ID or role ID.");
+    if (!value) return setMessage("Select a role.");
     setBusy(true);
     try {
-      await shareHomepageProfile(
-        profile.id,
-        grantKind === "role"
-          ? { kind: "role", roleId: Number(value) }
-          : grantKind === "user"
-            ? { kind: "user", userId: value }
-            : { kind: "authenticated" },
-      );
+      await shareHomepageProfile(profile.id, {
+        kind: "role",
+        roleId: Number(value),
+      });
       setGrantValue("");
-      setMessage("Grant added.");
+      setMessage("Role grant added.");
       onProfilesChanged();
     } catch (error) {
       setMessage(
@@ -135,10 +132,49 @@ export function HomepageSelector({
     }
   }
 
-  async function importProfile(profile: HomepageProfile) {
+  async function renameProfile(profile: HomepageProfile) {
+    const nextName = renameValue.trim();
+    if (!nextName) return setMessage("Enter a profile name.");
     setBusy(true);
     try {
-      const copy = await importHomepageProfile(profile.id);
+      await updateHomepageProfileName(profile.id, nextName);
+      setRenameProfileId(null);
+      setMessage("Profile renamed.");
+      onProfilesChanged();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Could not rename profile.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteProfile(profile: HomepageProfile) {
+    if (!window.confirm(`Delete Homepage “${profile.name}”?`)) return;
+    setBusy(true);
+    try {
+      await deleteHomepageProfile(profile.id);
+      if (selectedId === profile.id) onChange(null);
+      setMessage("Profile deleted.");
+      onProfilesChanged();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Could not delete profile.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importProfile(profile: HomepageProfile) {
+    const nextName = importName.trim();
+    if (!nextName) return setMessage("Enter a name for the imported Homepage.");
+    setBusy(true);
+    try {
+      const copy = await importHomepageProfile(profile.id, nextName);
+      setImportProfileId(null);
+      setImportName("");
       onProfilesChanged();
       onChange(copy.id);
       setMessage("Profile imported as a personal copy.");
@@ -243,10 +279,63 @@ export function HomepageSelector({
                 key={profile.id}
                 className="mb-3 border-b border-border pb-3 last:border-0"
               >
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="font-medium">{profile.name}</span>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  {renameProfileId === profile.id ? (
+                    <input
+                      aria-label={`${profile.name} profile name`}
+                      className="min-w-0 flex-1 border border-border bg-background px-2 py-1"
+                      value={renameValue}
+                      onChange={(event) => setRenameValue(event.target.value)}
+                    />
+                  ) : (
+                    <span className="font-medium">{profile.name}</span>
+                  )}
                   <span className="text-muted-foreground">Owned</span>
                 </div>
+                {renameProfileId === profile.id ? (
+                  <div className="mb-2 flex gap-1">
+                    <button
+                      type="button"
+                      className="border border-border px-2 py-1"
+                      disabled={busy}
+                      onClick={() => renameProfile(profile)}
+                    >
+                      Save name
+                    </button>
+                    <button
+                      type="button"
+                      className="border border-border px-2 py-1"
+                      disabled={busy}
+                      onClick={() => setRenameProfileId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-2 flex gap-1">
+                    <button
+                      type="button"
+                      aria-label={`Rename ${profile.name}`}
+                      className="border border-border px-2 py-1"
+                      disabled={busy}
+                      onClick={() => {
+                        setRenameProfileId(profile.id);
+                        setRenameValue(profile.name);
+                      }}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${profile.name}`}
+                      className="border border-border px-2 py-1"
+                      disabled={busy}
+                      onClick={() => deleteProfile(profile)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
                 <label className="flex items-center gap-2 text-muted-foreground">
                   Visibility
                   <select
@@ -270,22 +359,20 @@ export function HomepageSelector({
                     <option value="authenticated">All signed-in users</option>
                   </select>
                 </label>
-                <div className="mt-2 flex gap-1">
-                  <select
-                    aria-label={`${profile.name} grant type`}
-                    className="border border-border bg-card px-2 py-1 text-xs text-foreground"
-                    style={{ colorScheme: "dark" }}
-                    value={grantKind}
-                    onChange={(event) => {
-                      setGrantKind(event.target.value as typeof grantKind);
-                      setGrantValue("");
-                    }}
-                  >
-                    <option value="authenticated">Everyone signed in</option>
-                    <option value="role">Role ID</option>
-                    <option value="user">User ID</option>
-                  </select>
-                  {grantKind !== "authenticated" && (
+                {profile.visibility !== "authenticated" && (
+                  <div className="mt-2 flex gap-1">
+                    <select
+                      aria-label={`${profile.name} grant type`}
+                      className="border border-border bg-card px-2 py-1 text-xs text-foreground"
+                      style={{ colorScheme: "dark" }}
+                      value={grantKind}
+                      onChange={(event) => {
+                        setGrantKind(event.target.value as "role");
+                        setGrantValue("");
+                      }}
+                    >
+                      <option value="role">Role ID</option>
+                    </select>
                     <select
                       aria-label="Grant value"
                       className="min-w-0 flex-1 border border-border bg-background px-2 py-1 text-xs text-foreground"
@@ -295,34 +382,24 @@ export function HomepageSelector({
                       onChange={(event) => setGrantValue(event.target.value)}
                     >
                       <option value="">
-                        {targetsLoading
-                          ? "Loading..."
-                          : grantKind === "role"
-                            ? "Select a role"
-                            : "Select a user"}
+                        {targetsLoading ? "Loading..." : "Select a role"}
                       </option>
-                      {grantKind === "role"
-                        ? roles.map((role) => (
-                            <option key={role.id} value={String(role.id)}>
-                              {role.displayName} ({role.id})
-                            </option>
-                          ))
-                        : users.map((user) => (
-                            <option key={user.userId} value={user.userId}>
-                              {user.username} ({user.userId})
-                            </option>
-                          ))}
+                      {roles.map((role) => (
+                        <option key={role.id} value={String(role.id)}>
+                          {role.displayName} ({role.id})
+                        </option>
+                      ))}
                     </select>
-                  )}
-                  <button
-                    type="button"
-                    className="border border-border px-2 py-1"
-                    disabled={busy}
-                    onClick={() => addGrant(profile)}
-                  >
-                    Grant
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      className="border border-border px-2 py-1"
+                      disabled={busy}
+                      onClick={() => addGrant(profile)}
+                    >
+                      Grant role
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             {profiles
@@ -330,20 +407,51 @@ export function HomepageSelector({
               .map((profile) => (
                 <div
                   key={profile.id}
-                  className="flex items-center justify-between border-b border-border py-1 last:border-0"
+                  className="flex items-center justify-between gap-2 border-b border-border py-1 last:border-0"
                 >
                   <span>
                     {profile.name}{" "}
                     <span className="text-muted-foreground">(shared)</span>
                   </span>
-                  <button
-                    type="button"
-                    className="border border-border px-2 py-1"
-                    disabled={busy}
-                    onClick={() => importProfile(profile)}
-                  >
-                    Import
-                  </button>
+                  {importProfileId === profile.id ? (
+                    <div className="flex min-w-0 gap-1">
+                      <input
+                        aria-label="Imported profile name"
+                        className="min-w-0 w-32 border border-border bg-background px-2 py-1"
+                        value={importName}
+                        onChange={(event) => setImportName(event.target.value)}
+                        placeholder="New name"
+                      />
+                      <button
+                        type="button"
+                        className="border border-border px-2 py-1"
+                        disabled={busy}
+                        onClick={() => importProfile(profile)}
+                      >
+                        Import
+                      </button>
+                      <button
+                        type="button"
+                        className="border border-border px-2 py-1"
+                        disabled={busy}
+                        onClick={() => setImportProfileId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="border border-border px-2 py-1"
+                      disabled={busy}
+                      onClick={() => {
+                        setImportProfileId(profile.id);
+                        setImportName("");
+                      }}
+                    >
+                      Import
+                    </button>
+                  )}
                 </div>
               ))}
             {message && (

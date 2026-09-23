@@ -66,7 +66,12 @@ homepageProfilesRouter.put("/:id", async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = Number(req.params.id);
   const visibility = req.body?.visibility;
-  if (visibility !== "private" && visibility !== "authenticated") {
+  const name = req.body?.name;
+  if (
+    visibility !== undefined &&
+    visibility !== "private" &&
+    visibility !== "authenticated"
+  ) {
     return res
       .status(400)
       .json({ error: "visibility must be private or authenticated" });
@@ -77,8 +82,26 @@ homepageProfilesRouter.put("/:id", async (req: Request, res: Response) => {
   );
   if (!own)
     return res.status(404).json({ error: "Homepage profile not found" });
-  await repo.updateVisibility(id, visibility);
+  if (visibility !== undefined) await repo.updateVisibility(id, visibility);
+  if (name !== undefined) {
+    if (typeof name !== "string" || !name.trim())
+      return res.status(400).json({ error: "name is required" });
+    await repo.updateName(id, name.trim());
+  }
   res.json({ success: true });
+});
+
+homepageProfilesRouter.delete("/:id", async (req: Request, res: Response) => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const id = Number(req.params.id);
+  const repo = createCurrentHomepageProfileRepository();
+  const own = (await repo.listVisible(userId, [])).some(
+    (profile) => profile.id === id && profile.ownerId === userId,
+  );
+  if (!own)
+    return res.status(404).json({ error: "Homepage profile not found" });
+  await repo.delete(id);
+  res.status(204).send();
 });
 
 homepageProfilesRouter.post(
@@ -86,6 +109,9 @@ homepageProfilesRouter.post(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const id = Number(req.params.id);
+    const name = req.body?.name;
+    if (typeof name !== "string" || !name.trim())
+      return res.status(400).json({ error: "name is required" });
     const roleIds = await createCurrentRoleRepository().listUserRoleIds(userId);
     const visible = (
       await createCurrentHomepageProfileRepository().listVisible(
@@ -98,7 +124,11 @@ homepageProfilesRouter.post(
     res
       .status(201)
       .json(
-        await createCurrentHomepageProfileRepository().importCopy(userId, id),
+        await createCurrentHomepageProfileRepository().importCopy(
+          userId,
+          id,
+          name.trim(),
+        ),
       );
   },
 );

@@ -18,9 +18,10 @@ export async function getHomepageProfiles(): Promise<HomepageProfile[]> {
 
 export async function importHomepageProfile(
   id: number,
+  name: string,
 ): Promise<HomepageProfile> {
   try {
-    const res = await homepageApi.post(`/profiles/${id}/import`);
+    const res = await homepageApi.post(`/profiles/${id}/import`, { name });
     return res.data;
   } catch (error) {
     throw handleApiError(error, "import homepage profile");
@@ -66,6 +67,24 @@ export async function updateHomepageProfile(
     await homepageApi.put(`/profiles/${id}`, { visibility });
   } catch (error) {
     throw handleApiError(error, "update homepage profile");
+  }
+}
+export async function updateHomepageProfileName(
+  id: number,
+  name: string,
+): Promise<void> {
+  try {
+    await homepageApi.put(`/profiles/${id}`, { name });
+  } catch (error) {
+    throw handleApiError(error, "rename homepage profile");
+  }
+}
+
+export async function deleteHomepageProfile(id: number): Promise<void> {
+  try {
+    await homepageApi.delete(`/profiles/${id}`);
+  } catch (error) {
+    throw handleApiError(error, "delete homepage profile");
   }
 }
 export async function getHomepageItems(): Promise<HomepageItemRow[]> {
