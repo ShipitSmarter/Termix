@@ -46,14 +46,18 @@ describe("RBAC coverage for split host routers", () => {
       requireEdit,
       requireDataAccess,
     ]);
-    for (const path of ["/bulk-import", "/ssh-config-import"]) {
-      expect(handlers(router, "post", path).slice(0, 4)).toEqual([
-        authenticate,
-        requireCreate,
-        requireEdit,
-        requireDataAccess,
-      ]);
-    }
+    expect(handlers(router, "post", "/bulk-import").slice(1, 5)).toEqual([
+      authenticate,
+      requireCreate,
+      requireEdit,
+      requireDataAccess,
+    ]);
+    expect(handlers(router, "post", "/ssh-config-import").slice(0, 4)).toEqual([
+      authenticate,
+      requireCreate,
+      requireEdit,
+      requireDataAccess,
+    ]);
   });
 
   it("gates folder reads and mutations with their matching permissions", () => {

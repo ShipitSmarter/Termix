@@ -41,6 +41,14 @@ vi.mock("../../../utils/permission-manager.js", () => ({
   SHARE_PERMISSION_LEVELS: ["connect", "view", "edit", "manage"],
   PermissionManager: {
     getInstance: () => ({
+      requirePermission:
+        () =>
+        (
+          _req: express.Request,
+          _res: express.Response,
+          next: express.NextFunction,
+        ) =>
+          next(),
       canAccessHost: async () => state.access,
       requireAdmin:
         () =>
