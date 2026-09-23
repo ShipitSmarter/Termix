@@ -727,7 +727,7 @@ export const sharedHostSelections = mysqlTable(
     hostId: int("host_id")
       .notNull()
       .references(() => hosts.id, { onDelete: "cascade" }),
-    folder: text("folder"),
+    folder: varchar("folder", { length: 255 }),
     createdAt: varchar("created_at", { length: 255 })
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
