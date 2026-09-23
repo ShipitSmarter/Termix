@@ -142,7 +142,7 @@ function StatsBarCard({
   hosts: Host[];
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
 }) {
@@ -476,7 +476,20 @@ export function HostStatusCard({
           return (
             <div
               key={i}
-              onClick={() => onOpenTab(host, "host-metrics")}
+              onClick={() =>
+                onOpenTab(
+                  host,
+                  host.enableSsh
+                    ? "host-metrics"
+                    : host.enableRdp
+                      ? "rdp"
+                      : host.enableVnc
+                        ? "vnc"
+                        : host.enableTelnet
+                          ? "telnet"
+                          : "host-metrics",
+                )
+              }
               className="flex min-w-0 items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
             >
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -841,7 +854,7 @@ function CardItem({
   >;
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
@@ -1069,7 +1082,7 @@ type PanelColumnProps = {
   >;
   uptimeFormatted: string;
   versionText: string;
-  versionStatus: "up_to_date" | "requires_update" | "beta";
+  versionStatus: "up_to_date" | "requires_update" | "beta" | "unknown";
   releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
@@ -1330,7 +1343,7 @@ export function DashboardTab({
   const [uptimeFormatted, setUptimeFormatted] = useState("");
   const [versionText, setVersionText] = useState("");
   const [versionStatus, setVersionStatus] = useState<
-    "up_to_date" | "requires_update" | "beta"
+    "up_to_date" | "requires_update" | "beta" | "unknown"
   >("up_to_date");
   const [releaseUrl, setReleaseUrl] = useState("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
@@ -1360,11 +1373,19 @@ export function DashboardTab({
         const hostId = Number(host.id);
         const knownStatus = statuses?.[hostId]?.status;
         if (knownStatus === "offline") return null;
-        if (host.authType === "none" || host.authType === "opkssh") return null;
+        if (
+          host.authType === "none" ||
+          host.authType === "opkssh" ||
+          host.authType === "stepca"
+        )
+          return null;
 
         try {
           const existing = newSessions.get(hostId);
-          if (!existing) {
+          if (existing && !(await sendMetricsHeartbeat(existing))) {
+            newSessions.delete(hostId);
+          }
+          if (!newSessions.has(hostId)) {
             const reg = await registerMetricsViewer(hostId);
             if (reg.skipped) return null;
             if (reg.success && reg.viewerSessionId) {
@@ -1436,7 +1457,7 @@ export function DashboardTab({
     getVersionInfo()
       .then((info) => {
         setVersionText(info.localVersion ?? "");
-        setVersionStatus(info.status ?? "up_to_date");
+        setVersionStatus(info.status ?? "unknown");
         setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});
@@ -1511,8 +1532,14 @@ export function DashboardTab({
     if (!isVisible || viewerSessionsRef.current.size === 0) return;
     const heartbeat = setInterval(async () => {
       if (document.visibilityState === "hidden") return;
-      for (const [, sessionId] of viewerSessionsRef.current) {
-        sendMetricsHeartbeat(sessionId).catch(() => {});
+      for (const [hostId, sessionId] of viewerSessionsRef.current) {
+        sendMetricsHeartbeat(sessionId)
+          .then((alive) => {
+            if (!alive && viewerSessionsRef.current.get(hostId) === sessionId) {
+              viewerSessionsRef.current.delete(hostId);
+            }
+          })
+          .catch(() => {});
       }
     }, 30000);
     return () => clearInterval(heartbeat);

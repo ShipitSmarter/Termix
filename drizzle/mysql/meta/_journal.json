@@ -127,6 +127,13 @@
       "when": 1790164325647,
       "tag": "0017_kind_sabra",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1790176402436,
+      "tag": "0018_jittery_hiroim",
+      "breakpoints": true
     }
   ]
 }
