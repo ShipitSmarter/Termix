@@ -14,6 +14,7 @@ import {
   updateHomepageItem,
   deleteHomepageItem,
   saveHomepageLayout,
+  getHomepageProfiles,
 } from "@/api/homepage-api";
 import { snapToGrid } from "./canvas/snapToGrid";
 import { screenToCanvas } from "./canvas/canvasGeometry";
@@ -25,6 +26,7 @@ import { WidgetShell } from "./widgets/WidgetShell";
 import { AddWidgetMenu } from "./dialogs/AddWidgetMenu";
 import { WidgetEditDialog } from "./dialogs/WidgetEditDialog";
 import { HomepageToolbar } from "./toolbar/HomepageToolbar";
+import { HomepageSelector } from "./toolbar/HomepageSelector";
 import { getWidgetType } from "./widgets/WidgetRegistry";
 
 // Side-effect imports so widgets register themselves
@@ -104,6 +106,17 @@ export function HomepageCanvas({
   });
   const [containerSize, setContainerSize] = useState({ w: 800, h: 600 });
   const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState<
+    import("@/types/homepage-types").HomepageProfile[]
+  >([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(
+    () => {
+      const raw = localStorage.getItem("homepage.activeProfile");
+      return raw ? Number(raw) : null;
+    },
+  );
+  const [profileUnavailable, setProfileUnavailable] = useState(false);
+  const effectiveReadOnly = Boolean(isReadOnly || selectedProfileId !== null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const panRef = useRef(pan);
@@ -118,15 +131,72 @@ export function HomepageCanvas({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
-      setContainerSize({ w: el.offsetWidth, h: el.offsetHeight });
-    });
+    const ro = new ResizeObserver(() =>
+      setContainerSize({ w: el.offsetWidth, h: el.offsetHeight }),
+    );
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
+  const refreshProfiles = useCallback(() => {
+    getHomepageProfiles()
+      .then((available) => {
+        setProfiles(available);
+        if (
+          selectedProfileId !== null &&
+          !available.some((profile) => profile.id === selectedProfileId)
+        ) {
+          setProfileUnavailable(true);
+        }
+      })
+      .catch(() => {
+        if (selectedProfileId !== null) setProfileUnavailable(true);
+      });
+  }, [selectedProfileId]);
+
+  useEffect(() => {
+    refreshProfiles();
+  }, [refreshProfiles]);
+
+  const selectProfile = useCallback((id: number | null) => {
+    setSelectedProfileId(id);
+    setProfileUnavailable(false);
+    if (id === null) localStorage.removeItem("homepage.activeProfile");
+    else localStorage.setItem("homepage.activeProfile", String(id));
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
+    const selected =
+      selectedProfileId === null
+        ? null
+        : profiles.find((profile) => profile.id === selectedProfileId);
+    if (selected) {
+      const layoutEntries = selected.layout?.entries ?? [];
+      setWidgets(
+        selected.items.map((item) => {
+          const entry = layoutEntries.find(
+            (candidate) => candidate.itemId === item.id,
+          );
+          const typeDef = getWidgetType(item.typeId as WidgetTypeId);
+          return {
+            id: item.id,
+            typeId: item.typeId,
+            title: item.title,
+            config: JSON.parse(item.config || "{}"),
+            x: entry?.x ?? 0,
+            y: entry?.y ?? 0,
+            w: entry?.w ?? typeDef?.defaultSize.w ?? GRID_SIZE * 8,
+            h: entry?.h ?? typeDef?.defaultSize.h ?? GRID_SIZE * 6,
+            zOrder: entry?.zOrder ?? 0,
+          };
+        }),
+      );
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
     Promise.all([getHomepageItems(), getHomepageLayout()])
       .then(([items, layoutRow]) => {
         if (cancelled) return;
@@ -157,7 +227,7 @@ export function HomepageCanvas({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedProfileId, profiles]);
 
   const scheduleSave = useCallback(
     (newWidgets?: CanvasWidget[], newPan?: typeof pan, newZoom?: number) => {
@@ -298,7 +368,7 @@ export function HomepageCanvas({
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
-      if (isLocked || isReadOnly) return;
+      if (isLocked || effectiveReadOnly) return;
       if ((e.target as HTMLElement).closest("[data-widget]")) return;
       e.preventDefault();
       const rect = containerRef.current!.getBoundingClientRect();
@@ -313,7 +383,7 @@ export function HomepageCanvas({
         canvasY: snapToGrid(y),
       });
     },
-    [isLocked, isReadOnly],
+    [isLocked, effectiveReadOnly],
   );
 
   const handleAddWidget = useCallback(
@@ -486,6 +556,26 @@ export function HomepageCanvas({
       style={{ cursor: draggingId ? "grabbing" : "default" }}
     >
       <CanvasDotBackground pan={pan} zoom={zoom} />
+      <HomepageSelector
+        profiles={profiles}
+        selectedId={selectedProfileId}
+        onChange={selectProfile}
+        unavailable={profileUnavailable}
+        personalWidgets={selectedProfileId === null ? widgets : []}
+        personalLayout={{
+          entries: widgets.map((widget) => ({
+            itemId: widget.id,
+            x: widget.x,
+            y: widget.y,
+            w: widget.w,
+            h: widget.h,
+            zOrder: widget.zOrder,
+          })),
+          pan,
+          zoom,
+        }}
+        onProfilesChanged={refreshProfiles}
+      />
 
       <div
         className="absolute origin-top-left"
@@ -501,7 +591,7 @@ export function HomepageCanvas({
             key={widget.id}
             widget={widget}
             isLocked={isLocked}
-            isReadOnly={isReadOnly}
+            isReadOnly={effectiveReadOnly}
             isDragging={draggingId === widget.id}
             isResizing={resizingId === widget.id}
             onStartDrag={startDrag}
@@ -515,7 +605,7 @@ export function HomepageCanvas({
         ))}
       </div>
 
-      {widgets.length === 0 && !isReadOnly && (
+      {widgets.length === 0 && !effectiveReadOnly && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
           <div className="flex items-center gap-2 bg-card border border-border px-3 py-2 shadow-sm">
             <LayoutGrid className="size-3.5 text-muted-foreground/50 shrink-0" />
@@ -526,7 +616,7 @@ export function HomepageCanvas({
         </div>
       )}
 
-      {isReadOnly && onOpenFullscreen && (
+      {effectiveReadOnly && onOpenFullscreen && (
         <button
           className="absolute top-2 right-2 z-20 text-xs text-muted-foreground hover:text-foreground bg-card/80 border border-border px-2 py-1"
           onClick={onOpenFullscreen}
@@ -535,7 +625,7 @@ export function HomepageCanvas({
         </button>
       )}
 
-      {!isReadOnly && (
+      {!effectiveReadOnly && (
         <HomepageToolbar
           zoom={zoom}
           isLocked={isLocked}

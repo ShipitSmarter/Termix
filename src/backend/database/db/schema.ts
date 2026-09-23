@@ -1754,6 +1754,42 @@ export const homepageLayouts = sqliteTable("homepage_layouts", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const homepageProfiles = sqliteTable("homepage_profiles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ownerId: text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  visibility: text("visibility").notNull().default("private"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const homepageProfileItems = sqliteTable("homepage_profile_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  profileId: integer("profile_id").notNull().references(() => homepageProfiles.id, { onDelete: "cascade" }),
+  typeId: text("type_id").notNull(),
+  title: text("title"),
+  config: text("config").notNull().default("{}"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const homepageProfileLayouts = sqliteTable("homepage_profile_layouts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  profileId: integer("profile_id").notNull().unique().references(() => homepageProfiles.id, { onDelete: "cascade" }),
+  layout: text("layout").notNull().default("{}"),
+});
+
+export const homepageProfileAccess = sqliteTable("homepage_profile_access", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  profileId: integer("profile_id").notNull().references(() => homepageProfiles.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  roleId: integer("role_id").references(() => roles.id, { onDelete: "cascade" }),
+  accessKind: text("access_kind").notNull(),
+}, (table) => [
+  index("idx_homepage_profile_access_profile").on(table.profileId),
+  index("idx_homepage_profile_access_user").on(table.userId),
+  index("idx_homepage_profile_access_role").on(table.roleId),
+]);
 // --- homepage end ---
 
 // --- fleets begin ---
