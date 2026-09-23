@@ -19,6 +19,7 @@ import { FleetRepository } from "./fleet-repository.js";
 import { FleetInventoryRepository } from "./fleet-inventory-repository.js";
 import { HomepageItemRepository } from "./homepage-item-repository.js";
 import { HomepageLayoutRepository } from "./homepage-layout-repository.js";
+import { HomepageProfileRepository } from "./homepage-profile-repository.js";
 import { HostFolderRepository } from "./host-folder-repository.js";
 import { HostHealthRepository } from "./host-health-repository.js";
 import { HostMetricsHistoryRepository } from "./host-metrics-history-repository.js";
@@ -248,6 +249,13 @@ export function createCurrentHomepageItemRepository(): HomepageItemRepository {
   return new HomepageItemRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("homepage_item_repository_write"),
+  );
+}
+
+export function createCurrentHomepageProfileRepository(): HomepageProfileRepository {
+  return new HomepageProfileRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("homepage_profile_repository_write"),
   );
 }
 

@@ -2538,6 +2538,15 @@ const migrateSchema = () => {
       });
     }
   }
+
+  for (const ddl of [
+    `CREATE TABLE IF NOT EXISTS homepage_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, name TEXT NOT NULL, visibility TEXT NOT NULL DEFAULT 'private', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS homepage_profile_items (id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id INTEGER NOT NULL REFERENCES homepage_profiles(id) ON DELETE CASCADE, type_id TEXT NOT NULL, title TEXT, config TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS homepage_profile_layouts (id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id INTEGER NOT NULL UNIQUE REFERENCES homepage_profiles(id) ON DELETE CASCADE, layout TEXT NOT NULL DEFAULT '{}')`,
+    `CREATE TABLE IF NOT EXISTS homepage_profile_access (id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id INTEGER NOT NULL REFERENCES homepage_profiles(id) ON DELETE CASCADE, user_id TEXT REFERENCES users(id) ON DELETE CASCADE, role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE, access_kind TEXT NOT NULL)`,
+  ]) {
+    try { sqlite.exec(ddl); } catch (error) { databaseLogger.warn("Failed to create homepage profile table", { operation: "schema_migration", error }); }
+  }
   // --- homepage end ---
 
   // --- fleets begin ---

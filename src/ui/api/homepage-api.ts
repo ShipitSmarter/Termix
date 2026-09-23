@@ -4,8 +4,70 @@ import type {
   HomepageLayoutData,
   HomepageLayoutRow,
   WidgetTypeId,
+  HomepageProfile,
 } from "@/types/homepage-types";
 
+export async function getHomepageProfiles(): Promise<HomepageProfile[]> {
+  try {
+    const res = await homepageApi.get("/profiles");
+    return res.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch homepage profiles");
+  }
+}
+
+export async function importHomepageProfile(
+  id: number,
+): Promise<HomepageProfile> {
+  try {
+    const res = await homepageApi.post(`/profiles/${id}/import`);
+    return res.data;
+  } catch (error) {
+    throw handleApiError(error, "import homepage profile");
+  }
+}
+export async function createHomepageProfile(data: {
+  name: string;
+  entries: Array<{
+    typeId: string;
+    title?: string | null;
+    config?: Record<string, unknown>;
+  }>;
+  layout: HomepageLayoutData;
+}): Promise<HomepageProfile> {
+  try {
+    const res = await homepageApi.post("/profiles", data);
+    return res.data;
+  } catch (error) {
+    throw handleApiError(error, "create homepage profile");
+  }
+}
+
+export async function shareHomepageProfile(
+  id: number,
+  grant: {
+    kind: "authenticated" | "role" | "user";
+    roleId?: number;
+    userId?: string;
+  },
+): Promise<void> {
+  try {
+    await homepageApi.post(`/profiles/${id}/share`, grant);
+  } catch (error) {
+    throw handleApiError(error, "share homepage profile");
+  }
+}
+
+export async function updateHomepageProfile(
+  id: number,
+  visibility: "private" | "authenticated",
+): Promise<void> {
+  try {
+    await homepageApi.put(`/profiles/${id}`, { visibility });
+  } catch (error) {
+    throw handleApiError(error, "update homepage profile");
+  }
+}
 export async function getHomepageItems(): Promise<HomepageItemRow[]> {
   try {
     const res = await homepageApi.get("/items");

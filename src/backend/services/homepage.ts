@@ -9,6 +9,7 @@ import { homepageFaviconRouter } from "../database/routes/homepage-favicon-route
 import { homepageRssRouter } from "../database/routes/homepage-rss-routes.js";
 import { homepagePingRouter } from "../database/routes/homepage-ping-routes.js";
 import { homepageProxyRouter } from "../database/routes/homepage-proxy-routes.js";
+import { homepageProfilesRouter } from "../database/routes/homepage-profile-routes.js";
 
 const app = express();
 const authManager = AuthManager.getInstance();
@@ -31,6 +32,7 @@ app.use("/homepage/favicon", homepageFaviconRouter);
 app.use("/homepage/rss", homepageRssRouter);
 app.use("/homepage/ping", homepagePingRouter);
 app.use("/homepage/proxy", homepageProxyRouter);
+app.use("/homepage/profiles", homepageProfilesRouter);
 
 app.listen(PORT, "127.0.0.1", () => {});
 

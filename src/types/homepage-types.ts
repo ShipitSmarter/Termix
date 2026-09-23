@@ -39,6 +39,24 @@ export type WidgetTypeId =
   | "docker_activity"
   | "ssh_quick_connect";
 
+export interface HomepageProfileItem {
+  id: number;
+  profileId: number;
+  typeId: WidgetTypeId;
+  title: string | null;
+  config: string;
+}
+
+export interface HomepageProfile {
+  id: number;
+  ownerId: string;
+  name: string;
+  visibility: string;
+  items: HomepageProfileItem[];
+  layout: HomepageLayoutData;
+  owned?: boolean;
+}
+
 export interface HomepageItemRow {
   id: number;
   userId: string;

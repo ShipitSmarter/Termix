@@ -1746,6 +1746,42 @@ export const homepageLayouts = mysqlTable("homepage_layouts", {
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
+
+export const homepageProfiles = mysqlTable("homepage_profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: varchar("owner_id", { length: 255 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  visibility: text("visibility").notNull().default("private"),
+  createdAt: varchar("created_at", { length: 255 }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  updatedAt: varchar("updated_at", { length: 255 }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const homepageProfileItems = mysqlTable("homepage_profile_items", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: int("profile_id").notNull().references(() => homepageProfiles.id, { onDelete: "cascade" }),
+  typeId: text("type_id").notNull(),
+  title: text("title"),
+  config: text("config").notNull().default("{}"),
+  createdAt: varchar("created_at", { length: 255 }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const homepageProfileLayouts = mysqlTable("homepage_profile_layouts", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: int("profile_id").notNull().unique().references(() => homepageProfiles.id, { onDelete: "cascade" }),
+  layout: text("layout").notNull().default("{}"),
+});
+
+export const homepageProfileAccess = mysqlTable("homepage_profile_access", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: int("profile_id").notNull().references(() => homepageProfiles.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+  roleId: int("role_id").references(() => roles.id, { onDelete: "cascade" }),
+  accessKind: text("access_kind").notNull(),
+}, (table) => [
+  index("idx_homepage_profile_access_profile").on(table.profileId),
+  index("idx_homepage_profile_access_user").on(table.userId),
+  index("idx_homepage_profile_access_role").on(table.roleId),
+]);
 // --- homepage end ---
 
 // --- fleets begin ---
