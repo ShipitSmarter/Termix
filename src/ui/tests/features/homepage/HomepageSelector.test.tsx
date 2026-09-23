@@ -69,4 +69,16 @@ describe("HomepageSelector profile management", () => {
     );
     expect(baseProps.onChange).toHaveBeenCalledWith(8);
   });
+
+  it("keeps profile controls from starting a canvas gesture", () => {
+    const onCanvasMouseDown = vi.fn();
+    render(
+      <div onMouseDown={onCanvasMouseDown}>
+        <HomepageSelector {...baseProps} />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    fireEvent.mouseDown(screen.getByLabelText("New profile name"));
+    expect(onCanvasMouseDown).not.toHaveBeenCalled();
+  });
 });
