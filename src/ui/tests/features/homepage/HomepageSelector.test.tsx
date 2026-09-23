@@ -9,11 +9,19 @@ import {
 import { HomepageSelector } from "../../../features/homepage/toolbar/HomepageSelector";
 
 const createHomepageProfile = vi.fn();
+const getRoles = vi.fn().mockResolvedValue({ roles: [] });
+const getUserList = vi.fn().mockResolvedValue({ users: [] });
 vi.mock("@/api/homepage-api", () => ({
   createHomepageProfile: (...args: unknown[]) => createHomepageProfile(...args),
   importHomepageProfile: vi.fn(),
   shareHomepageProfile: vi.fn(),
   updateHomepageProfile: vi.fn(),
+}));
+vi.mock("@/api/rbac-api", () => ({
+  getRoles: (...args: unknown[]) => getRoles(...args),
+}));
+vi.mock("@/api/user-management-api", () => ({
+  getUserList: (...args: unknown[]) => getUserList(...args),
 }));
 
 afterEach(() => {
@@ -68,6 +76,56 @@ describe("HomepageSelector profile management", () => {
       ),
     );
     expect(baseProps.onChange).toHaveBeenCalledWith(8);
+  });
+
+  it("loads role and user choices for profile grants", async () => {
+    getRoles.mockResolvedValue({
+      roles: [
+        {
+          id: 7,
+          name: "operators",
+          displayName: "Operators",
+          description: null,
+          isSystem: false,
+          permissions: [],
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+    getUserList.mockResolvedValue({
+      users: [
+        {
+          userId: "user-2",
+          username: "Alice",
+          is_admin: false,
+          is_oidc: false,
+          totp_enabled: false,
+        },
+      ],
+    });
+    render(<HomepageSelector {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    fireEvent.change(screen.getByLabelText("Team grant type"), {
+      target: { value: "role" },
+    });
+    await waitFor(() => expect(screen.getByText("Operators (7)")).toBeTruthy());
+    expect(screen.getByRole("option", { name: "Operators (7)" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Team grant type"), {
+      target: { value: "user" },
+    });
+    expect(screen.getByRole("option", { name: "Alice (user-2)" })).toBeTruthy();
+  });
+
+  it("uses dark styling for profile management selects", () => {
+    render(<HomepageSelector {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    expect(screen.getByLabelText("Team visibility").className).toContain(
+      "bg-card",
+    );
+    expect(screen.getByLabelText("Team grant type").className).toContain(
+      "bg-card",
+    );
   });
 
   it("keeps profile controls from starting a canvas gesture", () => {
