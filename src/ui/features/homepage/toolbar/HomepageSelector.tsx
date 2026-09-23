@@ -128,7 +128,15 @@ export function HomepageSelector({
   }
 
   return (
-    <div className="absolute top-3 left-3 z-30 flex items-start gap-2">
+    <div
+      className="absolute top-3 left-3 z-30 flex items-start gap-2"
+      data-canvas-interactive
+      onMouseDown={(event) => event.stopPropagation()}
+      onMouseMove={(event) => event.stopPropagation()}
+      onMouseUp={(event) => event.stopPropagation()}
+      onWheel={(event) => event.stopPropagation()}
+      onContextMenu={(event) => event.stopPropagation()}
+    >
       <label
         className="mt-1 text-xs text-muted-foreground"
         htmlFor="homepage-profile-select"
