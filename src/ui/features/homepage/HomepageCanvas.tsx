@@ -67,6 +67,14 @@ const CANVAS_SIZE = 100_000;
 const DEFAULT_PAN = { x: CANVAS_SIZE / 2 - 600, y: CANVAS_SIZE / 2 - 400 };
 const DEFAULT_ZOOM = 1.0;
 
+export function isHomepageProfileReadOnly(
+  selectedProfileId: number | null,
+  profiles: Array<{ id: number; owned?: boolean }>,
+): boolean {
+  if (selectedProfileId === null) return false;
+  return !profiles.find((profile) => profile.id === selectedProfileId)?.owned;
+}
+
 interface HomepageCanvasProps {
   isReadOnly?: boolean;
   fitOnLoad?: boolean;
@@ -116,7 +124,9 @@ export function HomepageCanvas({
     },
   );
   const [profileUnavailable, setProfileUnavailable] = useState(false);
-  const effectiveReadOnly = Boolean(isReadOnly || selectedProfileId !== null);
+  const effectiveReadOnly = Boolean(
+    isReadOnly || isHomepageProfileReadOnly(selectedProfileId, profiles),
+  );
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const panRef = useRef(pan);
