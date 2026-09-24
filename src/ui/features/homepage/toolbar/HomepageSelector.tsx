@@ -74,6 +74,7 @@ export function HomepageSelector({
       const created = await createHomepageProfile({
         name: name.trim(),
         entries: personalWidgets.map((widget) => ({
+          sourceId: widget.id,
           typeId: widget.typeId,
           title: widget.title,
           config: widget.config,
