@@ -1,5 +1,6 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import {
   logAudit,
   getAuditUsername,
@@ -117,10 +118,20 @@ function assertResolvedHost(
 }
 
 const app = express();
+app.set("trust proxy", "loopback");
 
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
+const rateLimitHostOperations = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+app.use(rateLimitHostOperations);
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
@@ -128,9 +139,6 @@ app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
-
-const authManager = AuthManager.getInstance();
-app.use(authManager.createAuthMiddleware());
 
 const sshSessions: Record<string, SSHSession> = {};
 const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};

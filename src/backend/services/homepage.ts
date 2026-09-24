@@ -12,6 +12,7 @@ import { homepageProxyRouter } from "../database/routes/homepage-proxy-routes.js
 import { homepageProfilesRouter } from "../database/routes/homepage-profile-routes.js";
 
 const app = express();
+app.set("trust proxy", "loopback");
 const authManager = AuthManager.getInstance();
 const PORT = 30012;
 

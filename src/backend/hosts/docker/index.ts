@@ -1,5 +1,6 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import { rateLimit } from "express-rate-limit";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import { logger } from "../../utils/logger.js";
@@ -20,20 +21,27 @@ import {
 const sshLogger = logger;
 
 const app = express();
+app.set("trust proxy", "loopback");
 
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 
 app.use(cookieParser());
+const rateLimitHostOperations = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+app.use(rateLimitHostOperations);
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
-
-const authManager = AuthManager.getInstance();
-app.use(authManager.createAuthMiddleware());
 
 registerDockerSshRoutes(app);
 
