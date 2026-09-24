@@ -27,8 +27,6 @@ app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 
 app.use(cookieParser());
-const authManager = AuthManager.getInstance();
-app.use(authManager.createAuthMiddleware());
 const rateLimitHostOperations = rateLimit({
   windowMs: 60_000,
   limit: 60,
@@ -36,6 +34,8 @@ const rateLimitHostOperations = rateLimit({
   legacyHeaders: false,
 });
 app.use(rateLimitHostOperations);
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 app.use((_req, res, next) => {

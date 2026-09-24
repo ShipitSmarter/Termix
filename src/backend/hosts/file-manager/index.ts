@@ -123,8 +123,6 @@ app.set("trust proxy", "loopback");
 app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
-const authManager = AuthManager.getInstance();
-app.use(authManager.createAuthMiddleware());
 const rateLimitHostOperations = rateLimit({
   windowMs: 60_000,
   limit: 60,
@@ -132,6 +130,8 @@ const rateLimitHostOperations = rateLimit({
   legacyHeaders: false,
 });
 app.use(rateLimitHostOperations);
+const authManager = AuthManager.getInstance();
+app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
