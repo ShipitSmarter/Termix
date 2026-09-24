@@ -40,10 +40,30 @@ describe("HomepageProfileRepository", () => {
     const repo = await repository();
     const profile = await repo.create("owner", "Portable copy", {
       entries: [
-        { sourceId: 1001, typeId: "folder", title: "Links", config: { isExpanded: true } },
-        { sourceId: 1002, typeId: "countdown", title: "Launch", config: { label: "Launch" } },
-        { sourceId: 1003, typeId: "service_grid", title: "Services", config: { services: [] } },
-        { sourceId: 1004, typeId: "link_tree", title: "Bookmarks", config: { links: [] } },
+        {
+          sourceId: 1001,
+          typeId: "folder",
+          title: "Links",
+          config: { isExpanded: true },
+        },
+        {
+          sourceId: 1002,
+          typeId: "countdown",
+          title: "Launch",
+          config: { label: "Launch" },
+        },
+        {
+          sourceId: 1003,
+          typeId: "service_grid",
+          title: "Services",
+          config: { services: [] },
+        },
+        {
+          sourceId: 1004,
+          typeId: "link_tree",
+          title: "Bookmarks",
+          config: { links: [] },
+        },
       ],
       layout: {
         entries: [
