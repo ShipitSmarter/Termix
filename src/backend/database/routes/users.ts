@@ -42,6 +42,7 @@ import {
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserImageStorageRoutes } from "./user-image-storage-routes.js";
+import { registerBrandingRoutes } from "./branding-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerTouchInputSettingsRoutes } from "./touch-input-settings-routes.js";
 import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
@@ -55,7 +56,7 @@ import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { notifyAutomationInternalEvent } from "../../hosts/metrics/automation-bridge.js";
+import { notifyAutomationInternalEvent } from "../../hosts/automation-events.js";
 import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
@@ -92,6 +93,11 @@ async function syncSharedCredentialsForUserRoles(
     const { SharedHostSecretsManager } =
       await import("../../utils/shared-host-secrets-manager.js");
     await SharedHostSecretsManager.getInstance().snapshotForUserRoles(userId);
+    const { SharedCredentialSecretsManager } =
+      await import("../../utils/shared-credential-secrets-manager.js");
+    await SharedCredentialSecretsManager.getInstance().snapshotForUserRoles(
+      userId,
+    );
   } catch (error) {
     authLogger.warn("Failed to sync role shared host secrets", {
       operation,
@@ -2980,7 +2986,21 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
 
     const targetUserId = targetUser.id;
 
-    await deleteUserAndRelatedData(targetUserId);
+    // Inherit rather than drop: the deleting admin takes over the hosts and
+    // credentials unless another successor is named; "none" discards them.
+    const { successorUserId: requestedSuccessor } = req.body ?? {};
+    let successorUserId: string | undefined = userId;
+    if (requestedSuccessor === "none") {
+      successorUserId = undefined;
+    } else if (isNonEmptyString(requestedSuccessor)) {
+      const successor = await userRepository.findById(requestedSuccessor);
+      if (!successor || successor.id === targetUserId) {
+        return res.status(400).json({ error: "Invalid successor user" });
+      }
+      successorUserId = successor.id;
+    }
+
+    await deleteUserAndRelatedData(targetUserId, { successorUserId });
 
     authLogger.warn("User account deleted by admin", {
       operation: "admin_delete_user",
@@ -3042,6 +3062,7 @@ registerAcmeSSLRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);
 registerUserImageStorageRoutes(router, requireAdmin);
+registerBrandingRoutes(router, requireAdmin);
 
 registerSSOProviderRoutes(router);
 registerLDAPAuthRoutes(router);

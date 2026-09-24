@@ -1,6 +1,5 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import { rateLimit } from "express-rate-limit";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
 import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import { logger } from "../../utils/logger.js";
@@ -17,6 +16,7 @@ import {
   getRequestUserId,
   registerDockerSshRoutes,
 } from "./routes.js";
+import { listenOnServicePort } from "../../utils/service-listen.js";
 
 const sshLogger = logger;
 
@@ -27,13 +27,6 @@ app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 
 app.use(cookieParser());
-const rateLimitHostOperations = rateLimit({
-  windowMs: 60_000,
-  limit: 60,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-});
-app.use(rateLimitHostOperations);
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 app.use(express.json({ limit: "100mb" }));
@@ -55,14 +48,20 @@ registerDockerContainerRoutes(app, {
 
 const PORT = 30007;
 
-app.listen(PORT, "127.0.0.1", async () => {
-  try {
-    await authManager.initialize();
-  } catch (err) {
-    sshLogger.error("Failed to initialize Docker backend", err, {
-      operation: "startup",
-    });
-  }
+listenOnServicePort({
+  app,
+  port: PORT,
+  logger: sshLogger,
+  serviceName: "docker",
+  onListening: async () => {
+    try {
+      await authManager.initialize();
+    } catch (err) {
+      sshLogger.error("Failed to initialize Docker backend", err, {
+        operation: "startup",
+      });
+    }
+  },
 });
 
 process.on("SIGINT", () => {

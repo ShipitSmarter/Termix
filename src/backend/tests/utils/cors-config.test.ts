@@ -39,6 +39,12 @@ describe("isCorsOriginAllowed", () => {
     expect(isCorsOriginAllowed(request(), "https://portal.example")).toBe(true);
   });
 
+  it("rejects an unlisted origin once an allowlist is configured", () => {
+    process.env.CORS_ALLOWED_ORIGINS = "https://portal.example";
+    const req = request({ host: "termix.example" });
+    expect(isCorsOriginAllowed(req, "https://attacker.example")).toBe(false);
+  });
+
   it("does not allow a wildcard with credentialed requests", () => {
     process.env.CORS_ALLOWED_ORIGINS = "*";
     expect(isCorsOriginAllowed(request(), "https://attacker.example")).toBe(

@@ -192,7 +192,11 @@ export function HostsPanel({
   onEditingChange,
   active = true,
 }: {
-  onOpenTab: (host: Host, type: TabType) => void;
+  onOpenTab: (
+    host: Host,
+    type: TabType,
+    options?: { endpointId?: string; label?: string },
+  ) => void;
   onEditHost: (host: Host) => void;
   hostTree?: HostFolder;
   loading?: boolean;
@@ -780,7 +784,14 @@ export function HostsPanel({
                     {t("hosts.filterAuthGroup")}
                   </DropdownMenuLabel>
                   {(
-                    ["password", "key", "credential", "none", "opkssh"] as const
+                    [
+                      "password",
+                      "key",
+                      "credential",
+                      "none",
+                      "opkssh",
+                      "stepca",
+                    ] as const
                   ).map((val) => (
                     <DropdownMenuCheckboxItem
                       key={val}
@@ -1061,50 +1072,54 @@ export function HostsPanel({
         preferences={sidebarPrefs}
         update={updateSidebarPrefs}
       />
-
-      <div
-        className={`flex flex-col flex-1 min-h-0 ${managerEditing || sharedHostsPageOpen ? "hidden" : ""}`}
-      >
-        <SidebarTree
-          children={
-            hostTree
-              ? groupHosts(
-                  applyFilters(
-                    sortHostTree(hostTree, sortKey, pinnedFirst),
-                    filterState,
-                  ),
-                  groupKey,
-                  groupLabel,
-                ).children
-              : []
-          }
-          onOpenTab={onOpenTab}
-          onEditHost={onEditHost}
-          onShareHost={(host) => setShareModalHost(host)}
-          onProxmoxDiscover={(host) => {
-            const cfg = host.proxmoxConfig;
-            setProxmoxHostId(Number(host.id));
-            setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
-            setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
-            setProxmoxDefaultUsername(undefined);
-            setProxmoxDialogOpen(true);
-          }}
-          query={hostSearch.trim().toLowerCase()}
-          selectionMode={selectionMode}
-          onToggleSelectionMode={toggleSelectionMode}
-          loading={loading}
-          onExportSelected={(ids) => {
-            setExportPreselection(new Set(ids));
-            setExportDialogOpen(true);
-          }}
-          arrangeLocked={arrangeLocked}
-          density={sidebarPrefs.display.density}
-          trayTrigger={sidebarPrefs.display.trayTrigger}
-          showTags={sidebarPrefs.display.showTags}
-          openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
-        />
-      </div>
-
+      {sharedHostsPageOpen ? (
+        <SharedHostsCatalog onClose={closeSharedHostsPage} />
+      ) : (
+        active &&
+        !managerEditing && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <SidebarTree
+              children={
+                hostTree
+                  ? groupHosts(
+                      applyFilters(
+                        sortHostTree(hostTree, sortKey, pinnedFirst),
+                        filterState,
+                      ),
+                      groupKey,
+                      groupLabel,
+                    ).children
+                  : []
+              }
+              onOpenTab={onOpenTab}
+              onEditHost={onEditHost}
+              onShareHost={(host) => setShareModalHost(host)}
+              onProxmoxDiscover={(host) => {
+                const cfg = host.proxmoxConfig;
+                setProxmoxHostId(Number(host.id));
+                setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
+                setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
+                setProxmoxDefaultUsername(undefined);
+                setProxmoxDialogOpen(true);
+              }}
+              query={hostSearch.trim().toLowerCase()}
+              selectionMode={selectionMode}
+              onToggleSelectionMode={toggleSelectionMode}
+              loading={loading}
+              onExportSelected={(ids) => {
+                setExportPreselection(new Set(ids));
+                setExportDialogOpen(true);
+              }}
+              arrangeLocked={arrangeLocked}
+              density={sidebarPrefs.display.density}
+              trayTrigger={sidebarPrefs.display.trayTrigger}
+              showTags={sidebarPrefs.display.showTags}
+              openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
+            />
+          </div>
+        )
+      )}
+      883acdd0 (fix: repair shared host import and integrate add flow)
       <div
         className={
           managerEditing || sharedHostsPageOpen
@@ -1131,20 +1146,17 @@ export function HostsPanel({
           <HostManager onEditingChange={handleEditingChange} active={active} />
         )}
       </div>
-
       <HostShareModal
         open={shareModalHost !== null}
         onClose={() => setShareModalHost(null)}
         host={shareModalHost}
       />
-
       <HostExportDialog
         open={exportDialogOpen}
         onClose={() => setExportDialogOpen(false)}
         hosts={rawHosts}
         preselectedHostIds={exportPreselection}
       />
-
       <ProxmoxDiscoverDialog
         open={proxmoxDialogOpen}
         onClose={() => {
