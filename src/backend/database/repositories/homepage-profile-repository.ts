@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   homepageProfileAccess,
   homepageProfileItems,
@@ -6,7 +6,11 @@ import {
   homepageProfiles,
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
-import { insertReturning } from "./returning.js";
+import {
+  insertReturning,
+  updateReturning,
+  deleteReturning,
+} from "./returning.js";
 
 export const PORTABLE_HOMEPAGE_WIDGETS = new Set([
   "service_link",
@@ -87,6 +91,59 @@ export class HomepageProfileRepository {
     return { ...profile, items, layout: JSON.parse(layout.layout) };
   }
 
+  async updateItem(
+    profileId: number,
+    itemId: number,
+    updates: { title?: string | null; config?: string },
+  ) {
+    const rows = await updateReturning(
+      this.context,
+      homepageProfileItems,
+      updates,
+      and(
+        eq(homepageProfileItems.id, itemId),
+        eq(homepageProfileItems.profileId, profileId),
+      ),
+    );
+    await this.onWrite?.();
+    return rows[0] ?? null;
+  }
+
+  async deleteItem(profileId: number, itemId: number) {
+    const rows = await deleteReturning(
+      this.context,
+      homepageProfileItems,
+      and(
+        eq(homepageProfileItems.id, itemId),
+        eq(homepageProfileItems.profileId, profileId),
+      ),
+    );
+    await this.onWrite?.();
+    return rows[0] ?? null;
+  }
+
+  async saveLayout(profileId: number, layout: Record<string, unknown>) {
+    const existing = await this.context.drizzle
+      .select()
+      .from(homepageProfileLayouts)
+      .where(eq(homepageProfileLayouts.profileId, profileId))
+      .limit(1);
+    if (existing[0]) {
+      await updateReturning(
+        this.context,
+        homepageProfileLayouts,
+        { layout: JSON.stringify(layout) },
+        eq(homepageProfileLayouts.profileId, profileId),
+      );
+    } else {
+      await insertReturning(this.context, homepageProfileLayouts, {
+        profileId,
+        layout: JSON.stringify(layout),
+      });
+    }
+    await this.onWrite?.();
+    return { profileId, layout };
+  }
   async grant(profileId: number, grant: HomepageProfileGrant): Promise<void> {
     if (grant.kind === "authenticated") {
       await this.context.drizzle

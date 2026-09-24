@@ -104,6 +104,71 @@ homepageProfilesRouter.delete("/:id", async (req: Request, res: Response) => {
   res.status(204).send();
 });
 
+homepageProfilesRouter.put(
+  "/:profileId/items/:itemId",
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const profileId = Number(req.params.profileId);
+    const itemId = Number(req.params.itemId);
+    const profile = (
+      await createCurrentHomepageProfileRepository().listVisible(userId, [])
+    ).find((entry) => entry.id === profileId && entry.ownerId === userId);
+    if (!profile)
+      return res.status(404).json({ error: "Homepage profile not found" });
+    const updates: { title?: string | null; config?: string } = {};
+    if (req.body?.title !== undefined) updates.title = req.body.title;
+    if (req.body?.config !== undefined)
+      updates.config = JSON.stringify(req.body.config);
+    const updated = await createCurrentHomepageProfileRepository().updateItem(
+      profileId,
+      itemId,
+      updates,
+    );
+    if (!updated)
+      return res.status(404).json({ error: "Homepage item not found" });
+    res.json(updated);
+  },
+);
+
+homepageProfilesRouter.delete(
+  "/:profileId/items/:itemId",
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const profileId = Number(req.params.profileId);
+    const itemId = Number(req.params.itemId);
+    const profile = (
+      await createCurrentHomepageProfileRepository().listVisible(userId, [])
+    ).find((entry) => entry.id === profileId && entry.ownerId === userId);
+    if (!profile)
+      return res.status(404).json({ error: "Homepage profile not found" });
+    const deleted = await createCurrentHomepageProfileRepository().deleteItem(
+      profileId,
+      itemId,
+    );
+    if (!deleted)
+      return res.status(404).json({ error: "Homepage item not found" });
+    res.status(204).send();
+  },
+);
+
+homepageProfilesRouter.put(
+  "/:profileId/layout",
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const profileId = Number(req.params.profileId);
+    const profile = (
+      await createCurrentHomepageProfileRepository().listVisible(userId, [])
+    ).find((entry) => entry.id === profileId && entry.ownerId === userId);
+    if (!profile)
+      return res.status(404).json({ error: "Homepage profile not found" });
+    res.json(
+      await createCurrentHomepageProfileRepository().saveLayout(
+        profileId,
+        req.body ?? {},
+      ),
+    );
+  },
+);
 homepageProfilesRouter.post(
   "/:id/import",
   async (req: Request, res: Response) => {

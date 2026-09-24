@@ -14,6 +14,9 @@ import {
   updateHomepageItem,
   deleteHomepageItem,
   saveHomepageLayout,
+  updateHomepageProfileItem,
+  deleteHomepageProfileItem,
+  saveHomepageProfileLayout,
   getHomepageProfiles,
 } from "@/api/homepage-api";
 import { snapToGrid } from "./canvas/snapToGrid";
@@ -246,21 +249,35 @@ export function HomepageCanvas({
         const ws = newWidgets ?? widgetsRef.current;
         const p = newPan ?? panRef.current;
         const z = newZoom ?? zoomRef.current;
-        saveHomepageLayout({
-          entries: ws.map((w) => ({
-            itemId: w.id,
-            x: w.x,
-            y: w.y,
-            w: w.w,
-            h: w.h,
-            zOrder: w.zOrder,
-          })),
-          pan: p,
-          zoom: z,
-        }).catch(() => {});
+        (selectedProfileId === null
+          ? saveHomepageLayout({
+              entries: ws.map((w) => ({
+                itemId: w.id,
+                x: w.x,
+                y: w.y,
+                w: w.w,
+                h: w.h,
+                zOrder: w.zOrder,
+              })),
+              pan: p,
+              zoom: z,
+            })
+          : saveHomepageProfileLayout(selectedProfileId, {
+              entries: ws.map((w) => ({
+                itemId: w.id,
+                x: w.x,
+                y: w.y,
+                w: w.w,
+                h: w.h,
+                zOrder: w.zOrder,
+              })),
+              pan: p,
+              zoom: z,
+            })
+        ).catch(() => {});
       }, 500);
     },
-    [],
+    [selectedProfileId],
   );
 
   useEffect(() => {
@@ -459,7 +476,8 @@ export function HomepageCanvas({
   const handleDelete = useCallback(
     async (id: number) => {
       try {
-        await deleteHomepageItem(id);
+        if (selectedProfileId === null) await deleteHomepageItem(id);
+        else await deleteHomepageProfileItem(selectedProfileId, id);
         setWidgets((prev) => {
           const next = prev.filter((w) => w.id !== id);
           scheduleSave(next);
@@ -467,7 +485,7 @@ export function HomepageCanvas({
         });
       } catch {}
     },
-    [scheduleSave],
+    [scheduleSave, selectedProfileId],
   );
 
   const handleEdit = useCallback(
@@ -488,13 +506,19 @@ export function HomepageCanvas({
       config: Record<string, unknown>,
     ) => {
       try {
-        await updateHomepageItem(id, { title, config });
+        if (selectedProfileId === null)
+          await updateHomepageItem(id, { title, config });
+        else
+          await updateHomepageProfileItem(selectedProfileId, id, {
+            title,
+            config,
+          });
         setWidgets((prev) =>
           prev.map((w) => (w.id === id ? { ...w, title, config } : w)),
         );
       } catch {}
     },
-    [],
+    [selectedProfileId],
   );
 
   const resetView = useCallback(() => {

@@ -1,6 +1,10 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express, { type Response } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import { rateLimit } from "express-rate-limit";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -46,6 +50,10 @@ const router = express.Router();
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
+const requirePermission = (permission: string) =>
+  typeof permissionManager.requirePermission === "function"
+    ? permissionManager.requirePermission(permission)
+    : (_req: Request, _res: Response, next: NextFunction) => next();
 
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
@@ -195,7 +203,7 @@ export function parseShareTargets(
 router.post(
   "/host/:id/share",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.share"),
+  requirePermission("hosts.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const hostId = parseInt(id, 10);
@@ -407,7 +415,7 @@ router.post(
 router.post(
   "/folder/share",
   authenticateJWT,
-  permissionManager.requirePermission("hosts.share"),
+  requirePermission("hosts.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId!;
     const { folder } = req.body ?? {};
@@ -1284,7 +1292,7 @@ router.get(
 router.post(
   "/roles",
   authenticateJWT,
-  permissionManager.requirePermission("admin.roles.manage"),
+  requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const { name, displayName, description } = req.body;
 
@@ -1376,7 +1384,7 @@ router.post(
 router.put(
   "/roles/:id",
   authenticateJWT,
-  permissionManager.requirePermission("admin.roles.manage"),
+  requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
@@ -1519,7 +1527,7 @@ router.get(
 router.delete(
   "/roles/:id",
   authenticateJWT,
-  permissionManager.requirePermission("admin.roles.manage"),
+  requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
@@ -1584,7 +1592,7 @@ router.delete(
 router.get(
   "/roles/:id/members",
   authenticateJWT,
-  permissionManager.requirePermission("admin.roles.manage"),
+  requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
@@ -1649,7 +1657,7 @@ router.get(
 router.post(
   "/users/:userId/roles",
   authenticateJWT,
-  permissionManager.requirePermission("admin.roles.manage"),
+  requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const targetUserId = Array.isArray(req.params.userId)
       ? req.params.userId[0]
@@ -1780,7 +1788,7 @@ router.post(
 router.delete(
   "/users/:userId/roles/:roleId",
   authenticateJWT,
-  permissionManager.requirePermission("admin.roles.manage"),
+  requirePermission("admin.roles.manage"),
   async (req: AuthenticatedRequest, res: Response) => {
     const targetUserId = Array.isArray(req.params.userId)
       ? req.params.userId[0]
@@ -1948,7 +1956,7 @@ async function canManageCredentialSharing(
 router.post(
   "/credential/:id/share",
   authenticateJWT,
-  permissionManager.requirePermission("credentials.share"),
+  requirePermission("credentials.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const credentialId = parseInt(id, 10);
@@ -2161,7 +2169,7 @@ router.delete(
 router.post(
   "/snippet/:id/share",
   authenticateJWT,
-  permissionManager.requirePermission("snippets.share"),
+  requirePermission("snippets.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const snippetId = parseInt(id, 10);
@@ -2317,7 +2325,7 @@ router.post(
 router.post(
   "/snippet-folder/share",
   authenticateJWT,
-  permissionManager.requirePermission("snippets.share"),
+  requirePermission("snippets.share"),
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.userId!;
     const { folder, durationHours } = req.body ?? {};

@@ -151,3 +151,27 @@ export async function saveHomepageLayout(
     throw handleApiError(error, "save homepage layout");
   }
 }
+
+export async function updateHomepageProfileItem(
+  profileId: number,
+  id: number,
+  data: { title?: string | null; config?: Record<string, unknown> },
+): Promise<HomepageItemRow> {
+  const res = await homepageApi.put(`/profiles/${profileId}/items/${id}`, data);
+  return res.data;
+}
+
+export async function deleteHomepageProfileItem(
+  profileId: number,
+  id: number,
+): Promise<void> {
+  await homepageApi.delete(`/profiles/${profileId}/items/${id}`);
+}
+
+export async function saveHomepageProfileLayout(
+  profileId: number,
+  layout: HomepageLayoutData,
+): Promise<HomepageLayoutRow> {
+  const res = await homepageApi.put(`/profiles/${profileId}/layout`, layout);
+  return res.data;
+}

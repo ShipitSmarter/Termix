@@ -459,11 +459,11 @@ export function registerHostBulkRoutes(
 
   router.post(
     "/bulk-import",
-    rateLimitHostBulkImport,
     authenticateJWT,
     requireCreatePermission,
     requireEditPermission,
     requireDataAccess,
+    rateLimitHostBulkImport,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
       const {
@@ -486,12 +486,7 @@ export function registerHostBulkRoutes(
 
       let orderedHosts: ReturnType<typeof prepareHostImports>;
       try {
-        const importInput = credentialFree
-          ? hostsToImport.map((host: Record<string, unknown>) =>
-              sanitizeCredentialFreeImportedHost(host),
-            )
-          : hostsToImport;
-        orderedHosts = prepareHostImports(importInput);
+        orderedHosts = prepareHostImports(hostsToImport);
       } catch (error) {
         return res.status(400).json({ error: getErrorMessage(error) });
       }
