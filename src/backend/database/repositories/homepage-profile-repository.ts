@@ -14,17 +14,33 @@ import {
 
 export const PORTABLE_HOMEPAGE_WIDGETS = new Set([
   "service_link",
+  "folder",
   "clock",
   "notes",
   "bookmark_list",
   "weather",
+  "iframe_embed",
   "image_widget",
   "markdown_notes",
   "rss_feed",
+  "alert_feed",
+  "ping_status",
+  "recent_activity",
+  "termix_uptime",
+  "system_overview",
+  "calendar",
+  "countdown",
+  "search_bar",
   "text_banner",
+  "service_grid",
+  "dashboard_links",
+  "search_links",
+  "link_tree",
+  "docker_activity",
 ]);
 
 export type HomepageProfileEntry = {
+  sourceId?: number;
   typeId: string;
   title?: string | null;
   config?: Record<string, unknown>;
@@ -48,10 +64,30 @@ export function sanitizeHomepageEntries(entries: HomepageProfileEntry[]) {
   return entries
     .filter((entry) => PORTABLE_HOMEPAGE_WIDGETS.has(entry.typeId))
     .map((entry) => ({
+      sourceId: entry.sourceId,
       typeId: entry.typeId,
       title: entry.title ?? null,
       config: JSON.stringify(entry.config ?? {}),
     }));
+}
+
+function remapLayout(
+  layout: Record<string, unknown>,
+  itemIdMap: Map<number, number>,
+): Record<string, unknown> {
+  const entries = Array.isArray(layout.entries) ? layout.entries : [];
+  return {
+    ...layout,
+    entries: entries.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") return [];
+      const sourceId = (entry as { itemId?: unknown }).itemId;
+      if (typeof sourceId !== "number") return [];
+      const itemId = itemIdMap.get(sourceId);
+      return itemId === undefined
+        ? []
+        : [{ ...(entry as Record<string, unknown>), itemId }];
+    }),
+  };
 }
 
 export class HomepageProfileRepository {
@@ -71,20 +107,24 @@ export class HomepageProfileRepository {
       visibility: "private",
     });
     const items = [];
+    const itemIdMap = new Map<number, number>();
     for (const item of sanitizeHomepageEntries(input.entries)) {
+      const { sourceId, ...values } = item;
       const [created] = await insertReturning(
         this.context,
         homepageProfileItems,
-        { profileId: profile.id, ...item },
+        { profileId: profile.id, ...values },
       );
       items.push(created);
+      if (sourceId !== undefined) itemIdMap.set(sourceId, created.id);
     }
+    const copiedLayout = remapLayout(input.layout, itemIdMap);
     const [layout] = await insertReturning(
       this.context,
       homepageProfileLayouts,
       {
         profileId: profile.id,
-        layout: JSON.stringify(input.layout),
+        layout: JSON.stringify(copiedLayout),
       },
     );
     await this.onWrite?.();
@@ -228,6 +268,7 @@ export class HomepageProfileRepository {
     if (!source) throw new Error("Homepage profile not found");
     return this.create(userId, name, {
       entries: source.items.map((item) => ({
+        sourceId: item.id,
         typeId: item.typeId,
         title: item.title,
         config: JSON.parse(item.config),

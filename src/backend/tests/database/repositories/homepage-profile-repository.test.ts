@@ -36,6 +36,45 @@ describe("HomepageProfileRepository", () => {
     expect(profile.items[0].typeId).toBe("clock");
   });
 
+  it("copies display-only widgets and remaps copied layout item IDs", async () => {
+    const repo = await repository();
+    const profile = await repo.create("owner", "Portable copy", {
+      entries: [
+        { sourceId: 1001, typeId: "folder", title: "Links", config: { isExpanded: true } },
+        { sourceId: 1002, typeId: "countdown", title: "Launch", config: { label: "Launch" } },
+        { sourceId: 1003, typeId: "service_grid", title: "Services", config: { services: [] } },
+        { sourceId: 1004, typeId: "link_tree", title: "Bookmarks", config: { links: [] } },
+      ],
+      layout: {
+        entries: [
+          { itemId: 1001, x: 30, y: 60, w: 240, h: 180, zOrder: 1 },
+          { itemId: 1002, x: 300, y: 60, w: 240, h: 180, zOrder: 2 },
+          { itemId: 1003, x: 30, y: 270, w: 510, h: 180, zOrder: 3 },
+          { itemId: 1004, x: 30, y: 480, w: 510, h: 180, zOrder: 4 },
+        ],
+        pan: { x: 10, y: 20 },
+        zoom: 1,
+      },
+    });
+
+    expect(profile.items.map((item) => item.typeId)).toEqual([
+      "folder",
+      "countdown",
+      "service_grid",
+      "link_tree",
+    ]);
+    expect(profile.layout.entries).toHaveLength(4);
+    expect(profile.layout.entries.map((entry) => entry.itemId)).toEqual(
+      profile.items.map((item) => item.id),
+    );
+    expect(profile.layout.entries.map(({ x, y }) => ({ x, y }))).toEqual([
+      { x: 30, y: 60 },
+      { x: 300, y: 60 },
+      { x: 30, y: 270 },
+      { x: 30, y: 480 },
+    ]);
+  });
+
   it("allows authenticated recipients to read live profiles and import copies", async () => {
     const repo = await repository();
     const profile = await repo.create("owner", "Shared", {
