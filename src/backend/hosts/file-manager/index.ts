@@ -1,5 +1,6 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import {
   logAudit,
   getAuditUsername,
@@ -124,6 +125,13 @@ app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
+const rateLimitHostOperations = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+app.use(rateLimitHostOperations);
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(express.raw({ limit: "5gb", type: "application/octet-stream" }));
