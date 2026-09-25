@@ -247,7 +247,18 @@ export function HomepageSelector({
         )}
         {open && (
           <div className="absolute left-0 mt-1 w-80 border border-border bg-card p-3 text-xs shadow-lg">
-            <div className="mb-2 font-semibold">Homepage profiles</div>
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="font-semibold">Homepage profiles</div>
+              <button
+                type="button"
+                aria-label="Close Homepage profiles"
+                title="Close"
+                className="-mt-1 -mr-1 px-1 text-lg leading-none text-muted-foreground hover:text-foreground"
+                onClick={() => setOpen(false)}
+              >
+                ×
+              </button>
+            </div>
             <div className="mb-3 border-b border-border pb-3">
               <div className="mb-1 text-muted-foreground">
                 Create from current personal Homepage
