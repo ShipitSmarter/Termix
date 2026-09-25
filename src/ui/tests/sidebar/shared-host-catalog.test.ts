@@ -21,6 +21,17 @@ const host = (id: number) => ({
 });
 
 describe("mergeSharedHostSelections", () => {
+  it("normalizes catalog tags for the sidebar host model", () => {
+    const projected = sharedCatalogHostToSSHHost({
+      ...host(7),
+      tags: "production,linux",
+      selected: true,
+      selectedFolder: null,
+    });
+
+    expect(projected.tags).toEqual(["production", "linux"]);
+  });
+
   it("marks only the caller's selected shared hosts and preserves placement", () => {
     expect(
       mergeSharedHostSelections(

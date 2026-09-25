@@ -32,6 +32,12 @@ export interface SharedHostCatalogRow extends SharedHostCatalogEntry {
 export function sharedCatalogHostToSSHHost(
   host: SharedHostCatalogRow,
 ): SSHHostWithStatus {
+  const tags = host.tags
+    ? host.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    : [];
   return {
     id: host.id,
     name: host.name ?? host.ip,
@@ -39,7 +45,7 @@ export function sharedCatalogHostToSSHHost(
     port: host.port,
     username: host.username,
     folder: host.selectedFolder,
-    tags: host.tags ?? undefined,
+    tags,
     authType: "none",
     connectionType: "ssh",
     status: "unknown",
