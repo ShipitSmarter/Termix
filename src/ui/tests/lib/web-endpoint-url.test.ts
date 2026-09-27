@@ -21,6 +21,20 @@ function endpoint(overrides: Partial<WebEndpoint> = {}): WebEndpoint {
 }
 
 describe("resolveWebEndpointUrl", () => {
+  it("builds a reverse proxy URL from its configured origin", () => {
+    expect(
+      resolveWebEndpointUrl({
+        hostAddress: "192.168.1.10",
+        endpoint: endpoint({
+          access: "proxy",
+          path: "/pve2",
+          proxyScheme: "https",
+          proxyHost: "pve.example.com",
+          proxyPort: 443,
+        }),
+      }),
+    ).toBe("https://pve.example.com:443/pve2");
+  });
   it("builds a direct URL at the host address", () => {
     expect(
       resolveWebEndpointUrl({
@@ -239,6 +253,23 @@ describe("webEndpointRefusalReason", () => {
     >;
   const direct = () =>
     endpoint({ access: "direct" }) as Pick<WebEndpoint, "access" | "bindHost">;
+
+  it("refuses a reverse proxy on the same cookie site as Termix", () => {
+    const proxy = endpoint({
+      access: "proxy",
+      proxyScheme: "https",
+      proxyHost: "caddy.termix.example.com",
+      proxyPort: 443,
+    }) as Pick<WebEndpoint, "access" | "bindHost" | "proxyHost">;
+    expect(
+      webEndpointRefusalReason(
+        proxy,
+        false,
+        "192.168.1.10",
+        "app.termix.example.com",
+      ),
+    ).toBe("direct-shares-session-cookie");
+  });
 
   it("refuses a direct endpoint on the same host that serves Termix", () => {
     // https://termix.example:8443 receives Termix's jwt: same host, and the

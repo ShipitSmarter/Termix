@@ -105,7 +105,7 @@ export interface ProxmoxConfig {
   };
 }
 
-export type WebEndpointAccess = "direct" | "tunnel";
+export type WebEndpointAccess = "direct" | "tunnel" | "proxy";
 export type WebEndpointRender =
   "external" | "embedded" | "browser-tab" | "browser-window";
 
@@ -124,6 +124,12 @@ export interface WebEndpoint {
   path?: string;
   access: WebEndpointAccess;
   render: WebEndpointRender;
+  /** Reverse proxy origin only. */
+  proxyScheme?: "http" | "https";
+  /** Reverse proxy origin only; a bare hostname or IP address. */
+  proxyHost?: string;
+  /** Reverse proxy origin only. */
+  proxyPort?: number;
   /**
    * Direct endpoints only. Allows an invalid TLS certificate for this
    * endpoint's exact origin. A no-op for tunnel access, whose host component

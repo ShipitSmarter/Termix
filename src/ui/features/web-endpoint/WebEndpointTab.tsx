@@ -105,7 +105,10 @@ export function WebEndpointTab({
         tunnelHost: currentTunnelHost(isElectron()) ?? undefined,
       });
 
-      if (endpoint.access === "direct" && endpoint.ignoreCert) {
+      if (
+        (endpoint.access === "direct" || endpoint.access === "proxy") &&
+        endpoint.ignoreCert
+      ) {
         await allowInvalidCertificateForOrigin(new URL(resolved).origin);
       }
 

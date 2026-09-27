@@ -285,6 +285,18 @@ export function HostEditorWebUiSection({
                                 value === "direct"
                                   ? endpoint.ignoreCert
                                   : false,
+                              proxyScheme:
+                                value === "proxy"
+                                  ? (endpoint.proxyScheme ?? "https")
+                                  : undefined,
+                              proxyHost:
+                                value === "proxy"
+                                  ? (endpoint.proxyHost ?? "")
+                                  : undefined,
+                              proxyPort:
+                                value === "proxy"
+                                  ? (endpoint.proxyPort ?? 443)
+                                  : undefined,
                             })
                           }
                         >
@@ -304,6 +316,9 @@ export function HostEditorWebUiSection({
                               disabled={!tunnelAvailable}
                             >
                               {t("hosts.webUiAccessTunnel")}
+                            </SelectItem>
+                            <SelectItem value="proxy" className="text-xs">
+                              {t("hosts.webUiAccessProxy")}
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -427,13 +442,74 @@ export function HostEditorWebUiSection({
                       </div>
                     )}
 
+                    {endpoint.access === "proxy" && (
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-muted-foreground">
+                          {t("hosts.webUiProxyOrigin")}
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={endpoint.proxyScheme ?? "https"}
+                            onValueChange={(value) =>
+                              update(index, {
+                                proxyScheme:
+                                  value as WebEndpoint["proxyScheme"],
+                              })
+                            }
+                          >
+                            <SelectTrigger
+                              aria-label={t("hosts.webUiProxyScheme")}
+                              size="sm"
+                              className="h-7 w-24 text-xs"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="https" className="text-xs">
+                                https
+                              </SelectItem>
+                              <SelectItem value="http" className="text-xs">
+                                http
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            aria-label={t("hosts.webUiProxyHost")}
+                            value={endpoint.proxyHost ?? ""}
+                            onChange={(e) =>
+                              update(index, { proxyHost: e.target.value })
+                            }
+                            placeholder="proxy.example.com"
+                            className="h-7 flex-1 text-xs"
+                          />
+                          <Input
+                            aria-label={t("hosts.webUiProxyPort")}
+                            type="number"
+                            min={MIN_WEB_ENDPOINT_PORT}
+                            max={MAX_WEB_ENDPOINT_PORT}
+                            value={endpoint.proxyPort ?? 443}
+                            onChange={(e) => {
+                              const parsed = Number(e.target.value);
+                              if (isWebEndpointPortValid(parsed))
+                                update(index, { proxyPort: parsed });
+                            }}
+                            className="h-7 w-20 text-xs"
+                          />
+                        </div>
+                        <p className="text-[11px] opacity-70">
+                          {t("hosts.webUiProxyOriginDesc")}
+                        </p>
+                      </div>
+                    )}
+
                     {endpoint.render === "embedded" && (
                       <p className="text-[11px] opacity-70">
                         {t("hosts.webUiRenderEmbeddedDesc")}
                       </p>
                     )}
 
-                    {endpoint.access === "direct" && (
+                    {(endpoint.access === "direct" ||
+                      endpoint.access === "proxy") && (
                       <div className="flex flex-col gap-1">
                         <label className="flex items-center gap-2 text-xs">
                           <Checkbox

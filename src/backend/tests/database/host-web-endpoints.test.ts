@@ -149,6 +149,42 @@ describe("normalizeWebEndpoints", () => {
     ]);
   });
 
+  it("keeps and normalizes a reverse proxy origin", () => {
+    expect(
+      normalizeWebEndpoints([
+        valid({
+          access: "proxy",
+          proxyScheme: "https",
+          proxyHost: " caddy.example.com ",
+          proxyPort: 443,
+        }),
+      ]),
+    ).toEqual([
+      expect.objectContaining({
+        access: "proxy",
+        proxyScheme: "https",
+        proxyHost: "caddy.example.com",
+        proxyPort: 443,
+      }),
+    ]);
+  });
+
+  it("drops a reverse proxy with an unsafe or incomplete origin", () => {
+    for (const overrides of [
+      { proxyScheme: "ftp", proxyHost: "caddy.example.com", proxyPort: 443 },
+      {
+        proxyScheme: "https",
+        proxyHost: "https://caddy.example.com",
+        proxyPort: 443,
+      },
+      { proxyScheme: "https", proxyHost: "caddy.example.com", proxyPort: 0 },
+    ]) {
+      expect(
+        normalizeWebEndpoints([valid({ access: "proxy", ...overrides })]),
+      ).toEqual([]);
+    }
+  });
+
   it("clears ignoreCert for tunnel access and keeps it for direct", () => {
     expect(
       normalizeWebEndpoints([valid({ access: "tunnel", ignoreCert: true })])[0]
