@@ -86,7 +86,10 @@ import {
   recordHostActionPreference,
 } from "@/lib/local-adaptive-preferences";
 import type { WebEndpoint } from "@/types/index";
-import { openWebEndpointExternally } from "@/api/web-endpoint-api";
+import {
+  openWebEndpointExternally,
+  openWebEndpointInBrowser,
+} from "@/api/web-endpoint-api";
 
 export function statusCheckEnabled(host: Host): boolean {
   return host.statsConfig?.statusCheckEnabled !== false;
@@ -525,6 +528,19 @@ export function HostItem({
           error instanceof Error ? error.message : t("hosts.webUiOpenFailed"),
         );
       });
+      return;
+    }
+    if (
+      endpoint.render === "browser-tab" ||
+      endpoint.render === "browser-window"
+    ) {
+      openWebEndpointInBrowser(host, endpoint, endpoint.render).catch(
+        (error: unknown) => {
+          toast.error(
+            error instanceof Error ? error.message : t("hosts.webUiOpenFailed"),
+          );
+        },
+      );
       return;
     }
     openHostTab("web-endpoint", {

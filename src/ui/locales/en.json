@@ -1848,6 +1848,8 @@
     "webUiAccessTunnelUnavailable": "An SSH tunnel needs SSH enabled on this host and a connection origin of this device.",
     "webUiRender": "Open in",
     "webUiRenderExternal": "Isolated desktop window",
+    "webUiRenderBrowserTab": "New browser tab",
+    "webUiRenderBrowserWindow": "New browser window",
     "webUiRenderEmbedded": "Termix tab",
     "webUiRenderEmbeddedDesc": "Embedding is best effort: some web interfaces refuse to load in a frame, and a login that relies on same-site cookies may loop. The external browser always works.",
     "webUiIgnoreCert": "Allow invalid certificate",

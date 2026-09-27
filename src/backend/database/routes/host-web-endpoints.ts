@@ -8,7 +8,12 @@ export { MAX_WEB_ENDPOINTS, MAX_WEB_ENDPOINT_LABEL_LENGTH };
 
 const SCHEMES = new Set(["http", "https"]);
 const ACCESS_VALUES = new Set(["direct", "tunnel"]);
-const RENDER_VALUES = new Set(["external", "embedded"]);
+const RENDER_VALUES = new Set([
+  "external",
+  "embedded",
+  "browser-tab",
+  "browser-window",
+]);
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;

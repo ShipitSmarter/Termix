@@ -160,3 +160,38 @@ describe("openWebEndpointExternally", () => {
     delete (window as unknown as { electronAPI?: unknown }).electronAPI;
   });
 });
+
+describe("openWebEndpointInBrowser", () => {
+  it("opens a browser tab with opener isolation", async () => {
+    const popup = { location: { href: "" }, close: vi.fn() };
+    windowOpen.mockReturnValue(popup);
+    const { openWebEndpointInBrowser } = await import("@/api/web-endpoint-api");
+    await openWebEndpointInBrowser(
+      host,
+      endpoint({ access: "direct" }),
+      "browser-tab",
+    );
+    expect(windowOpen).toHaveBeenCalledWith(
+      "about:blank",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(popup.location.href).toBe("https://192.168.1.10:8006/");
+  });
+
+  it("requests a separate browser window with opener isolation", async () => {
+    const popup = { location: { href: "" }, close: vi.fn() };
+    windowOpen.mockReturnValue(popup);
+    const { openWebEndpointInBrowser } = await import("@/api/web-endpoint-api");
+    await openWebEndpointInBrowser(
+      host,
+      endpoint({ access: "direct" }),
+      "browser-window",
+    );
+    expect(windowOpen).toHaveBeenCalledWith(
+      "about:blank",
+      "_blank",
+      "popup,width=1100,height=800,noopener,noreferrer",
+    );
+  });
+});

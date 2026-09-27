@@ -1,6 +1,7 @@
 import {
   currentTunnelHost,
   resolveWebEndpointUrl,
+  webEndpointRefusalReason,
 } from "@/lib/web-endpoint-url";
 import axios from "axios";
 import { handleApiError, tunnelApi } from "@/main-axios";
@@ -136,4 +137,51 @@ export async function openWebEndpointExternally(
     result.success !== true
   )
     throw new Error("Failed to open isolated web endpoint");
+}
+
+/**
+ * Opens a web endpoint in the browser hosting Termix. The blank window is
+ * created before awaiting a tunnel so browsers do not block the navigation as
+ * an unsolicited popup.
+ */
+export async function openWebEndpointInBrowser(
+  host: { id: string; ip: string },
+  endpoint: WebEndpoint,
+  render: "browser-tab" | "browser-window",
+): Promise<void> {
+  if (isElectron()) {
+    throw new Error("Browser windows are available only in web Termix");
+  }
+  const popup = window.open(
+    "about:blank",
+    "_blank",
+    render === "browser-window"
+      ? "popup,width=1100,height=800,noopener,noreferrer"
+      : "noopener,noreferrer",
+  );
+  if (!popup) {
+    throw new Error(
+      "The browser blocked the new window; allow popups for Termix",
+    );
+  }
+  try {
+    const refusal = webEndpointRefusalReason(endpoint, false, host.ip);
+    if (refusal) throw new Error(refusal);
+    const localPort =
+      endpoint.access === "tunnel"
+        ? await openWebEndpointTunnel(
+            requireNumericHostId(host.id),
+            endpoint.id,
+          )
+        : undefined;
+    popup.location.href = resolveWebEndpointUrl({
+      hostAddress: host.ip,
+      endpoint,
+      localPort,
+      tunnelHost: currentTunnelHost(false) ?? undefined,
+    });
+  } catch (error) {
+    popup.close();
+    throw error;
+  }
 }

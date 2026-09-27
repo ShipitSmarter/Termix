@@ -96,6 +96,29 @@ function normalizeHost(host: string): string {
   return h;
 }
 
+const MULTI_LABEL_PUBLIC_SUFFIXES = new Set([
+  "co.uk",
+  "org.uk",
+  "ac.uk",
+  "com.au",
+  "net.au",
+  "org.au",
+  "co.nz",
+  "com.br",
+  "com.cn",
+  "com.tr",
+]);
+
+/** Conservative eTLD+1 approximation: false positives refuse an endpoint. */
+function registrableDomain(host: string): string {
+  const labels = host.split(".").filter(Boolean);
+  if (labels.length <= 2) return labels.join(".");
+  const suffix = labels.slice(-2).join(".");
+  return MULTI_LABEL_PUBLIC_SUFFIXES.has(suffix)
+    ? labels.slice(-3).join(".")
+    : suffix;
+}
+
 /**
  * Whether a browser would attach Termix's `jwt` cookie to a request for
  * `targetHost` while the page is served from `pageHost` -- or accept a
@@ -104,15 +127,8 @@ function normalizeHost(host: string): string {
  * The web client sets `jwt` host-only (no `Domain`), so the port is irrelevant
  * and the disclosure direction is exactly an equal host. The reverse direction
  * -- the target answering `Set-Cookie: jwt=...; Domain=<parent>` -- reaches
- * Termix whenever the two share a domain, so a parent/sub relationship counts
- * too. The suffix check is anchored on a dot boundary so `eviltermix.example`
- * is not treated as same-site with `termix.example`.
- *
- * A precise registrable-domain (eTLD+1) test would also catch sibling
- * subdomains under a shared parent, but needs a public-suffix list this app
- * does not bundle; the exact/parent/sub check closes the reported same-host
- * case only. This is defense in depth, not cookie isolation: embedded frames
- * must use credentialless plus an opaque sandbox origin, including redirects.
+ * Termix whenever the two share a domain. The registrable-domain check also
+ * catches sibling subdomains.
  */
 export function sharesCookieSiteWithPage(
   targetHost: string,
@@ -122,7 +138,8 @@ export function sharesCookieSiteWithPage(
   const p = normalizeHost(pageHost);
   if (!t || !p) return false;
   if (t === p) return true;
-  return t.endsWith("." + p) || p.endsWith("." + t);
+  if (t.endsWith("." + p) || p.endsWith("." + t)) return true;
+  return registrableDomain(t) === registrableDomain(p);
 }
 
 function defaultPageHost(): string {

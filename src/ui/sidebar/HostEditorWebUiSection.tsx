@@ -330,6 +330,20 @@ export function HostEditorWebUiSection({
                             >
                               {t("hosts.webUiRenderExternal")}
                             </SelectItem>
+                            <SelectItem
+                              value="browser-tab"
+                              className="text-xs"
+                              disabled={isElectron()}
+                            >
+                              {t("hosts.webUiRenderBrowserTab")}
+                            </SelectItem>
+                            <SelectItem
+                              value="browser-window"
+                              className="text-xs"
+                              disabled={isElectron()}
+                            >
+                              {t("hosts.webUiRenderBrowserWindow")}
+                            </SelectItem>
                             <SelectItem value="embedded" className="text-xs">
                               {t("hosts.webUiRenderEmbedded")}
                             </SelectItem>
