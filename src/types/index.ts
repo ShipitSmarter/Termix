@@ -106,7 +106,8 @@ export interface ProxmoxConfig {
 }
 
 export type WebEndpointAccess = "direct" | "tunnel";
-export type WebEndpointRender = "external" | "embedded";
+export type WebEndpointRender =
+  "external" | "embedded" | "browser-tab" | "browser-window";
 
 /** One web UI a host serves, declared in the host's settings. */
 export interface WebEndpoint {

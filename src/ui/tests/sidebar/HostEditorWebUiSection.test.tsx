@@ -164,6 +164,35 @@ describe("HostEditorWebUiSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers browser tab and window only in browser mode", () => {
+    isElectron.mockReturnValue(false);
+    setup({ endpoints: [endpoint({ render: "embedded" })] });
+    fireEvent.click(screen.getByLabelText("hosts.webUiRender"));
+    expect(
+      screen.getByRole("option", { name: "hosts.webUiRenderBrowserTab" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("option", { name: "hosts.webUiRenderBrowserWindow" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("option", { name: "hosts.webUiRenderExternal" }),
+    ).toHaveAttribute("aria-disabled", "true");
+
+    cleanup();
+    isElectron.mockReturnValue(true);
+    setup({ endpoints: [endpoint({ render: "embedded" })] });
+    fireEvent.click(screen.getByLabelText("hosts.webUiRender"));
+    expect(
+      screen.getByRole("option", { name: "hosts.webUiRenderBrowserTab" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("option", { name: "hosts.webUiRenderBrowserWindow" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("option", { name: "hosts.webUiRenderExternal" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
+  });
+
   it("reports a row the normalizer would drop", () => {
     setup({ endpoints: [endpoint({ label: "   " })] });
     expect(

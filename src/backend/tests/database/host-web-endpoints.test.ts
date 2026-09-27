@@ -137,6 +137,18 @@ describe("normalizeWebEndpoints", () => {
     expect(normalizeWebEndpoints([valid({ render: "magic" })])).toEqual([]);
   });
 
+  it("preserves browser render modes", () => {
+    expect(
+      normalizeWebEndpoints([
+        valid({ id: "tab", render: "browser-tab" }),
+        valid({ id: "window", render: "browser-window" }),
+      ]),
+    ).toEqual([
+      expect.objectContaining({ id: "tab", render: "browser-tab" }),
+      expect.objectContaining({ id: "window", render: "browser-window" }),
+    ]);
+  });
+
   it("clears ignoreCert for tunnel access and keeps it for direct", () => {
     expect(
       normalizeWebEndpoints([valid({ access: "tunnel", ignoreCert: true })])[0]

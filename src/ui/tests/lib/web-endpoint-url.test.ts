@@ -197,6 +197,12 @@ describe("sharesCookieSiteWithPage", () => {
     ).toBe(true);
   });
 
+  it("is true for sibling subdomains under the same registrable domain", () => {
+    expect(
+      sharesCookieSiteWithPage("proxmox.example.com", "termix.example.com"),
+    ).toBe(true);
+  });
+
   it("is false for a genuinely different host", () => {
     expect(sharesCookieSiteWithPage("192.168.1.10", "termix.example")).toBe(
       false,
