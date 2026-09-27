@@ -159,12 +159,6 @@ export function FolderItem({
   // Synthetic group headers (group-by tag/status/etc.) are not real folders, so
   // they can't be edited, deleted, or used as drop targets.
   const isGroup = folderPath.startsWith("__group__:");
-  // Nested folders show their parent path as a muted breadcrumb so depth stays
-  // legible even when a folder is reached via search auto-expand rather than
-  // by manually opening every ancestor.
-  const pathSegments = isGroup ? [] : folderPath.split(" / ");
-  const breadcrumb =
-    pathSegments.length > 1 ? pathSegments.slice(0, -1).join(" / ") : null;
   const folderHosts = collectAllHosts(folder.children);
   const folderSelected =
     folderHosts.length > 0 &&
@@ -279,11 +273,6 @@ export function FolderItem({
           {
             <>
               <span className="min-w-0 flex-1 truncate">
-                {breadcrumb && (
-                  <span className="text-[10px] text-muted-foreground/40 truncate mr-1">
-                    {breadcrumb} /
-                  </span>
-                )}
                 <span className="text-[13px] font-bold text-foreground tracking-tight">
                   {folder.name}
                 </span>

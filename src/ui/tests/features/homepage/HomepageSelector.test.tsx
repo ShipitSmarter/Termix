@@ -80,6 +80,23 @@ describe("HomepageSelector profile management", () => {
     expect(baseProps.onChange).toHaveBeenCalledWith(8);
   });
 
+  it("closes profile management from its close button", () => {
+    render(<HomepageSelector {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+    expect(screen.getByText("Homepage profiles")).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close Homepage profiles" }),
+    );
+
+    expect(screen.queryByText("Homepage profiles")).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "Manage" })
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
+  });
+
   it("loads role choices for profile grants", async () => {
     getRoles.mockResolvedValue({
       roles: [

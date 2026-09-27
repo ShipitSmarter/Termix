@@ -30,6 +30,7 @@ export async function importHomepageProfile(
 export async function createHomepageProfile(data: {
   name: string;
   entries: Array<{
+    sourceId?: number;
     typeId: string;
     title?: string | null;
     config?: Record<string, unknown>;
