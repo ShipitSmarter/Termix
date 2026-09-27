@@ -152,6 +152,9 @@ export async function openWebEndpointInBrowser(
   if (isElectron()) {
     throw new Error("Browser windows are available only in web Termix");
   }
+  const refusal = webEndpointRefusalReason(endpoint, false, host.ip);
+  if (refusal) throw new Error(refusal);
+
   const popup = window.open(
     "about:blank",
     "_blank",
@@ -165,8 +168,6 @@ export async function openWebEndpointInBrowser(
     );
   }
   try {
-    const refusal = webEndpointRefusalReason(endpoint, false, host.ip);
-    if (refusal) throw new Error(refusal);
     const localPort =
       endpoint.access === "tunnel"
         ? await openWebEndpointTunnel(

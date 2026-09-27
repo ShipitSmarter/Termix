@@ -254,7 +254,7 @@ describe("webEndpointRefusalReason", () => {
   const direct = () =>
     endpoint({ access: "direct" }) as Pick<WebEndpoint, "access" | "bindHost">;
 
-  it("refuses a reverse proxy on the same cookie site as Termix", () => {
+  it("allows a configured reverse proxy on the same cookie site", () => {
     const proxy = endpoint({
       access: "proxy",
       proxyScheme: "https",
@@ -268,7 +268,7 @@ describe("webEndpointRefusalReason", () => {
         "192.168.1.10",
         "app.termix.example.com",
       ),
-    ).toBe("direct-shares-session-cookie");
+    ).toBeNull();
   });
 
   it("refuses a direct endpoint on the same host that serves Termix", () => {
