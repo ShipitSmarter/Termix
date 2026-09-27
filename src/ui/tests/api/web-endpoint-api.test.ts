@@ -179,6 +179,36 @@ describe("openWebEndpointInBrowser", () => {
     expect(popup.location.href).toBe("https://192.168.1.10:8006/");
   });
 
+  it("opens a configured reverse proxy origin in a browser tab", async () => {
+    const popup = { location: { href: "" }, close: vi.fn() };
+    windowOpen.mockReturnValue(popup);
+    const { openWebEndpointInBrowser } = await import("@/api/web-endpoint-api");
+    await openWebEndpointInBrowser(
+      host,
+      endpoint({
+        access: "proxy",
+        proxyScheme: "https",
+        proxyHost: "pve1.viya.it",
+        proxyPort: 8006,
+      }),
+      "browser-tab",
+    );
+    expect(popup.location.href).toBe("https://pve1.viya.it:8006/");
+  });
+
+  it("rejects a blocked endpoint before opening a blank browser surface", async () => {
+    pageHostname = "192.168.1.10";
+    const { openWebEndpointInBrowser } = await import("@/api/web-endpoint-api");
+    await expect(
+      openWebEndpointInBrowser(
+        host,
+        endpoint({ access: "direct" }),
+        "browser-tab",
+      ),
+    ).rejects.toThrow("direct-shares-session-cookie");
+    expect(windowOpen).not.toHaveBeenCalled();
+  });
+
   it("requests a separate browser window with opener isolation", async () => {
     const popup = { location: { href: "" }, close: vi.fn() };
     windowOpen.mockReturnValue(popup);

@@ -199,14 +199,14 @@ export function webEndpointRefusalReason(
 ): WebEndpointRefusalReason | null {
   if (runningInElectron) return null;
 
-  if (endpoint.access === "direct" || endpoint.access === "proxy") {
-    const targetHost =
-      endpoint.access === "proxy" ? endpoint.proxyHost : hostAddress;
-    if (targetHost && sharesCookieSiteWithPage(targetHost, pageHost)) {
+  if (endpoint.access === "direct") {
+    if (hostAddress && sharesCookieSiteWithPage(hostAddress, pageHost)) {
       return "direct-shares-session-cookie";
     }
     return null;
   }
+
+  if (endpoint.access === "proxy") return null;
 
   if (endpoint.access !== "tunnel") return null;
 
