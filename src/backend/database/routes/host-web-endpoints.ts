@@ -7,7 +7,7 @@ import type { WebEndpoint, WebUiConfig } from "../../../types/index.js";
 export { MAX_WEB_ENDPOINTS, MAX_WEB_ENDPOINT_LABEL_LENGTH };
 
 const SCHEMES = new Set(["http", "https"]);
-const ACCESS_VALUES = new Set(["direct", "tunnel"]);
+const ACCESS_VALUES = new Set(["direct", "tunnel", "proxy"]);
 const RENDER_VALUES = new Set([
   "external",
   "embedded",
@@ -91,6 +91,22 @@ function normalizeBindHost(raw: unknown): string | null | undefined {
   return null;
 }
 
+function normalizeProxyHost(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const value = raw.trim();
+  if (!value || value.length > 253 || hasControlCharacter(value)) return null;
+
+  const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
+  const HOSTNAME =
+    /^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
+  const IPV6_BRACKETED = /^\[[0-9A-Fa-f:.]+\]$/;
+
+  if (IPV4.test(value)) {
+    return value.split(".").every((part) => Number(part) <= 255) ? value : null;
+  }
+  return IPV6_BRACKETED.test(value) || HOSTNAME.test(value) ? value : null;
+}
+
 function normalizeEndpoint(raw: unknown): WebEndpoint | null {
   if (!raw || typeof raw !== "object") return null;
   const input = raw as Record<string, unknown>;
@@ -116,6 +132,7 @@ function normalizeEndpoint(raw: unknown): WebEndpoint | null {
   if (typeof render !== "string" || !RENDER_VALUES.has(render)) return null;
 
   const isTunnel = access === "tunnel";
+  const isProxy = access === "proxy";
 
   const endpoint: WebEndpoint = {
     id,
@@ -130,6 +147,20 @@ function normalizeEndpoint(raw: unknown): WebEndpoint | null {
     // downstream has to re-derive that.
     ignoreCert: !isTunnel && input.ignoreCert === true,
   };
+
+  if (isProxy) {
+    if (
+      typeof input.proxyScheme !== "string" ||
+      !SCHEMES.has(input.proxyScheme)
+    ) {
+      return null;
+    }
+    const proxyHost = normalizeProxyHost(input.proxyHost);
+    if (!proxyHost || !isValidPort(input.proxyPort)) return null;
+    endpoint.proxyScheme = input.proxyScheme as WebEndpoint["proxyScheme"];
+    endpoint.proxyHost = proxyHost;
+    endpoint.proxyPort = input.proxyPort;
+  }
 
   // Both are tunnel-only. Silently ignored on a direct endpoint rather than
   // rejected: they describe a forward that a direct endpoint never creates.

@@ -37,6 +37,13 @@ export function resolveWebEndpointUrl({
     return `${endpoint.scheme}://${authority}:${localPort}${path}`;
   }
 
+  if (endpoint.access === "proxy") {
+    if (!endpoint.proxyScheme || !endpoint.proxyHost || !endpoint.proxyPort) {
+      throw new Error("A reverse proxy endpoint needs a complete proxy origin");
+    }
+    return `${endpoint.proxyScheme}://${bracketIfIpv6(endpoint.proxyHost)}:${endpoint.proxyPort}${path}`;
+  }
+
   return `${endpoint.scheme}://${bracketIfIpv6(hostAddress)}:${endpoint.port}${path}`;
 }
 
@@ -185,15 +192,17 @@ export type WebEndpointRefusalReason =
  * resolve ("127.0.0.1").
  */
 export function webEndpointRefusalReason(
-  endpoint: Pick<WebEndpoint, "access" | "bindHost">,
+  endpoint: Pick<WebEndpoint, "access" | "bindHost" | "proxyHost">,
   runningInElectron: boolean,
   hostAddress: string | undefined,
   pageHost: string = defaultPageHost(),
 ): WebEndpointRefusalReason | null {
   if (runningInElectron) return null;
 
-  if (endpoint.access === "direct") {
-    if (hostAddress && sharesCookieSiteWithPage(hostAddress, pageHost)) {
+  if (endpoint.access === "direct" || endpoint.access === "proxy") {
+    const targetHost =
+      endpoint.access === "proxy" ? endpoint.proxyHost : hostAddress;
+    if (targetHost && sharesCookieSiteWithPage(targetHost, pageHost)) {
       return "direct-shares-session-cookie";
     }
     return null;

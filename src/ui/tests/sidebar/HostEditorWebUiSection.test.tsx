@@ -111,6 +111,14 @@ describe("HostEditorWebUiSection", () => {
     expect(screen.getByLabelText("hosts.webUiLocalPort")).toBeInTheDocument();
   });
 
+  it("shows the reverse proxy origin fields only for a reverse proxy endpoint", () => {
+    setup({ endpoints: [endpoint({ access: "proxy" })] });
+    expect(screen.getByLabelText("hosts.webUiProxyScheme")).toBeInTheDocument();
+    expect(screen.getByLabelText("hosts.webUiProxyHost")).toBeInTheDocument();
+    expect(screen.getByLabelText("hosts.webUiProxyPort")).toBeInTheDocument();
+    expect(screen.queryByLabelText("hosts.bindHost")).not.toBeInTheDocument();
+  });
+
   it("warns that a non-loopback bind is unauthenticated exposure", () => {
     setup({ endpoints: [endpoint({ access: "tunnel", bindHost: "0.0.0.0" })] });
     expect(screen.getByText("hosts.webUiBindHostExposed")).toBeInTheDocument();
