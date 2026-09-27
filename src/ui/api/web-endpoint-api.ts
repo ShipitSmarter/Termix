@@ -155,8 +155,16 @@ export async function openWebEndpointInBrowser(
   const refusal = webEndpointRefusalReason(endpoint, false, host.ip);
   if (refusal) throw new Error(refusal);
 
+  const initialUrl =
+    endpoint.access === "tunnel"
+      ? "about:blank"
+      : resolveWebEndpointUrl({
+          hostAddress: host.ip,
+          endpoint,
+          tunnelHost: currentTunnelHost(false) ?? undefined,
+        });
   const popup = window.open(
-    "about:blank",
+    initialUrl,
     "_blank",
     render === "browser-window"
       ? "popup,width=1100,height=800,noopener,noreferrer"
