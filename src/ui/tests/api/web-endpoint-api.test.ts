@@ -172,7 +172,7 @@ describe("openWebEndpointInBrowser", () => {
       "browser-tab",
     );
     expect(windowOpen).toHaveBeenCalledWith(
-      "about:blank",
+      "https://192.168.1.10:8006/",
       "_blank",
       "noopener,noreferrer",
     );
@@ -219,7 +219,7 @@ describe("openWebEndpointInBrowser", () => {
       "browser-window",
     );
     expect(windowOpen).toHaveBeenCalledWith(
-      "about:blank",
+      "https://192.168.1.10:8006/",
       "_blank",
       "popup,width=1100,height=800,noopener,noreferrer",
     );
