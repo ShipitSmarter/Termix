@@ -222,7 +222,7 @@
     "brace-expansion@5": "^5.0.9",
     "esbuild": "^0.28.1",
     "fast-uri@3": "^3.1.6",
-    "ip-address": "^10.5.0",
+    "ip-address": "^10.7.2",
     "js-yaml@4": "^4.3.2",
     "nanoid@3": "^3.3.18",
     "postcss": "^8.5.26",
